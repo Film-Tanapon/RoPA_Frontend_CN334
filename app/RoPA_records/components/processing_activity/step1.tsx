@@ -371,7 +371,7 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[#1E2A5E] font-medium text-[14px]">ข้อมูลส่วนบุคคลที่จัดเก็บ</label>
-              <textarea name="personalDataCollected" value={formData.personalInfo} onChange={handleChange} rows={2} placeholder="โปรดระบุ เช่น ชื่อ นามสกุล ที่อยู่ เป็นต้น...." className="p-3 border border-slate-300 bg-white outline-none focus:border-[#8B93C5] transition-colors resize-none placeholder:text-slate-400 rounded-md text-[14px] text-slate-800" />
+              <textarea name="personalInfo" value={formData.personalInfo} onChange={handleChange} rows={2} placeholder="โปรดระบุ เช่น ชื่อ นามสกุล ที่อยู่ เป็นต้น...." className="p-3 border border-slate-300 bg-white outline-none focus:border-[#8B93C5] transition-colors resize-none placeholder:text-slate-400 rounded-md text-[14px] text-slate-800" />
             </div>
           </section>
 
@@ -385,7 +385,7 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
                 <label className="flex items-center gap-3 cursor-pointer"><input type="radio" name="dataSource" value="direct" checked={formData.dataSource === 'direct'} onChange={handleChange} className="w-4 h-4 text-[#4A85E6]" /><span className="text-[#1E2A5E] text-[14px]">จากเจ้าของข้อมูลส่วนบุคคลโดยตรง</span></label>
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-3 cursor-pointer"><input type="radio" name="dataSource" value="other" checked={formData.dataSource === 'other'} onChange={handleChange} className="w-4 h-4 text-[#4A85E6]" /><span className="text-[#1E2A5E] text-[14px]">จากแหล่งอื่น :</span></label>
-                  <input type="text" name="dataSourceOtherSpec" value={formData.dataSourceOtherSpec} onChange={handleChange} disabled={formData.dataSource !== 'other'} placeholder="Please specific..." className="p-1 px-3 border border-slate-300 rounded-md text-[13px] w-[250px] disabled:bg-slate-100 outline-none focus:border-[#8B93C5]" />
+                  <input type="text" name="dataSourceOtherSpec" value={formData.dataSourceOtherSpec} onChange={handleChange} disabled={formData.dataSource !== 'other'} placeholder="Please specific..." className="p-1 px-3 border border-slate-300 rounded-md text-[13px] w-[250px] disabled:bg-slate-100 outline-none focus:border-[#8B93C5] text-slate-800" />
                 </div>
               </div>
             </div>
