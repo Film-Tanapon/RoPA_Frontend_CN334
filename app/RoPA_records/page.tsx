@@ -45,24 +45,41 @@ export default function RoPARecordsPage() {
     
     try {
       const token = localStorage.getItem("access_token");
+      let successCount = 0;
+      let failCount = 0;
+
+      // วนลูปลบทีละรายการ
       for (const id of selectedIds) {
-        await fetch(`http://localhost:3340/ropa-record/${id}`, {
+        // 👈 เช็ค URL ให้ตรงกับ Backend ของคุณนะครับ (มี s หรือไม่มี s)
+        const res = await fetch(`http://localhost:3340/ropa-records/${id}`, {
           method: "DELETE",
           headers: { 
             "Authorization": `Bearer ${token}` 
           }
         });
+
+        // 🌟 เช็คว่าลบผ่านจริงๆ ไหม
+        if (res.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
       }
       
-      alert("ลบข้อมูลสำเร็จ!");
+      // สรุปผลการลบ
+      if (failCount > 0) {
+        alert(`ลบไม่สำเร็จ ${failCount} รายการ \n(ข้อมูลอาจถูกใช้งานอยู่ หรือเซิร์ฟเวอร์มีปัญหา)`);
+      } else {
+        alert("ลบข้อมูลสำเร็จ");
+      }
+
       setSelectedIds([]); 
       loadRecords(); 
     } catch (error) {
       console.error("Error deleting data:", error);
-      alert("เกิดข้อผิดพลาดในการลบข้อมูล");
+      alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
     }
   };
-
   const renderContent = () => {
     if (activeMenu === 'User Management') {
       return <UserManagement searchTerm={searchTerm} setSearchTerm={setSearchTerm} />;
