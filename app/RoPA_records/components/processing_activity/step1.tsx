@@ -17,7 +17,7 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
     dataSubject: '',        
     dataCategory: '',       
     dataType: 'general',     
-    personalDataCollected: '',
+    personalInfo: '',
     dataSource: 'direct', 
     dataSourceOtherSpec: '',
     legalBasis: '',         
@@ -115,6 +115,7 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
         dataOwner: initialData.data_owner !== '-' ? initialData.data_owner : '',
         dataSubject: initialData.data_subject !== '-' ? initialData.data_subject : '',
         dataCategory: initialData.data_category !== 'Uncategorized' ? initialData.data_category : '',
+        personalInfo: initialData.personal_info || '',
         dataType: initialData.is_sensitive ? 'sensitive' : 'general',
         dataSource: initialData.source === 'direct' ? 'direct' : 'other',
         legalBasis: initialData.legal_basis !== '-' ? initialData.legal_basis : '',
@@ -189,7 +190,7 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
       };
       const isEditing = !!initialData; 
 
-      // 1. ================= เตรียมข้อมูล ROPA (ไม่มีปัญหา ตรงกันเป๊ะ) =================
+      // 1. ================= เตรียมข้อมูล ROPA =================
       const ropaPayload = {
         activity_name: formData.activityName || '-',
         purpose: formData.purpose || '-',
@@ -197,6 +198,7 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
         data_subject: formData.dataSubject || '-',
         data_category: formData.dataCategory || 'Uncategorized',
         is_sensitive: formData.dataType === 'sensitive',
+        personal_info: formData.personalInfo || '-',
         collection_method: formData.collectionMethod || '-',
         source: formData.dataSource === 'other' && formData.dataSourceOtherSpec ? formData.dataSourceOtherSpec : formData.dataSource,
         legal_basis: formData.legalBasis || '-',
@@ -230,16 +232,18 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
       if (!ropaRes.ok) throw new Error("เกิดข้อผิดพลาดในการบันทึก ROPA");
 
       const ropaResponseData = await ropaRes.json();
-      const targetRopaId = isEditing ? initialData.id : ropaResponseData.data.id;
+      // ดึง ID มาใช้ (ถ้าเป็นตอนสร้างใหม่จะได้จาก response แต่ถ้าตอนแก้จะใช้ initialData.id)
+      const targetRopaId = isEditing ? initialData.id : ropaResponseData.data?.id || ropaResponseData.id;
 
-      // 2. ================= จัดการ Transfers 🌟 แก้ไขชื่อตัวแปรให้ตรง Schema =================
-      if (formData.transferAbroad === 'yes') {
+      // 2. ================= จัดการ Transfers =================
+      // 🌟 บันทึกเฉพาะเมื่อเลือกโอนไปต่างประเทศ (yes) หรือ โอนให้บริษัทในเครือ (yes) เท่านั้น
+      if (formData.transferAbroad === 'yes' || formData.transferAffiliate === 'yes') {
         const transferPayload = {
           ropa_id: targetRopaId,
-          country: formData.destinationCountry || '-',            // ตรงกับ schemas.py
-          recipient_name: formData.transferAffiliate,             // ตรงกับ schemas.py
+          country: formData.destinationCountry || '-',            
+          recipient_name: formData.transferAffiliate,             
           transfer_method: formData.transferMethod || '-',
-          protection_std: formData.exceptionArt28 || '-',         // ตรงกับ schemas.py
+          protection_std: formData.exceptionArt28 || '-',         
           protection_measure: formData.protectionMeasure || '-'
         };
 
@@ -255,41 +259,41 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
         }
       }
 
-      // 3. ================= จัดการ Security Measures 🌟 เปลี่ยนเป็น Loop ตามโครงสร้าง =================
+      // 3. ================= จัดการ Security Measures =================
+      // 🌟 กรองเอาเฉพาะข้อมูลมาตรการความปลอดภัยที่ "ถูกพิมพ์" เข้ามาจริงๆ เท่านั้น
       const securityFields = [
-        { measure_type: 'org_measure', description: formData.orgMeasure || '-' },
-        { measure_type: 'tech_measure', description: formData.techMeasure || '-' },
-        { measure_type: 'physical_measure', description: formData.physicalMeasure || '-' },
-        { measure_type: 'access_control', description: formData.accessControl || '-' },
-        { measure_type: 'user_responsibility', description: formData.userResponsibility || '-' },
-        { measure_type: 'audit_measure', description: formData.auditMeasure || '-' }
-      ];
+        { measure_type: 'org_measure', description: formData.orgMeasure },
+        { measure_type: 'tech_measure', description: formData.techMeasure },
+        { measure_type: 'physical_measure', description: formData.physicalMeasure },
+        { measure_type: 'access_control', description: formData.accessControl },
+        { measure_type: 'user_responsibility', description: formData.userResponsibility },
+        { measure_type: 'audit_measure', description: formData.auditMeasure }
+      ].filter(field => field.description && field.description.trim() !== ''); // กรองเอาค่าว่างออกไป
 
-      // ดึงข้อมูลเดิมมาเช็คว่าต้อง Update หรือ Create
-      const checkSecurityRes = await fetch(`http://localhost:3340/security/${targetRopaId}`, { headers });
-      let existingSecurities: any[] = [];
-      if (checkSecurityRes.ok) {
-        const sJson = await checkSecurityRes.json();
-        existingSecurities = Array.isArray(sJson.data) ? sJson.data : (Array.isArray(sJson) ? sJson : []);
-      }
+      // 🌟 บันทึกเฉพาะเมื่อมีข้อมูลมาตรการส่งมาอย่างน้อย 1 อย่าง
+      if (securityFields.length > 0) {
+        const checkSecurityRes = await fetch(`http://localhost:3340/security/${targetRopaId}`, { headers });
+        let existingSecurities: any[] = [];
+        if (checkSecurityRes.ok) {
+          const sJson = await checkSecurityRes.json();
+          existingSecurities = Array.isArray(sJson.data) ? sJson.data : (Array.isArray(sJson) ? sJson : []);
+        }
 
-      // ทำการเซฟทีละหัวข้อ (เนื่องจาก backend ออกแบบมาเป็น measure_type)
-      for (const field of securityFields) {
-        const existing = existingSecurities.find(s => s.measure_type === field.measure_type);
-        if (existing) {
-          // ถ้ามีอยู่แล้วให้ Update
-          await fetch(`http://localhost:3340/security/${existing.id}`, {
-            method: "PUT", 
-            headers, 
-            body: JSON.stringify({ measure_type: field.measure_type, description: field.description })
-          });
-        } else {
-          // ถ้ายังไม่มีให้ Create ใหม่
-          await fetch(`http://localhost:3340/security`, {
-            method: "POST", 
-            headers, 
-            body: JSON.stringify({ ropa_id: targetRopaId, measure_type: field.measure_type, description: field.description })
-          });
+        for (const field of securityFields) {
+          const existing = existingSecurities.find(s => s.measure_type === field.measure_type);
+          if (existing) {
+            await fetch(`http://localhost:3340/security/${existing.id}`, {
+              method: "PUT", 
+              headers, 
+              body: JSON.stringify({ measure_type: field.measure_type, description: field.description })
+            });
+          } else {
+            await fetch(`http://localhost:3340/security`, {
+              method: "POST", 
+              headers, 
+              body: JSON.stringify({ ropa_id: targetRopaId, measure_type: field.measure_type, description: field.description })
+            });
+          }
         }
       }
 
@@ -367,7 +371,7 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[#1E2A5E] font-medium text-[14px]">ข้อมูลส่วนบุคคลที่จัดเก็บ</label>
-              <textarea name="personalDataCollected" value={formData.personalDataCollected} onChange={handleChange} rows={2} placeholder="โปรดระบุ เช่น ชื่อ นามสกุล ที่อยู่ เป็นต้น...." className="p-3 border border-slate-300 bg-white outline-none focus:border-[#8B93C5] transition-colors resize-none placeholder:text-slate-400 rounded-md text-[14px] text-slate-800" />
+              <textarea name="personalDataCollected" value={formData.personalInfo} onChange={handleChange} rows={2} placeholder="โปรดระบุ เช่น ชื่อ นามสกุล ที่อยู่ เป็นต้น...." className="p-3 border border-slate-300 bg-white outline-none focus:border-[#8B93C5] transition-colors resize-none placeholder:text-slate-400 rounded-md text-[14px] text-slate-800" />
             </div>
           </section>
 
