@@ -213,7 +213,6 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
         right_rejection_reason: formData.denialOfRights || '-',
         risk_level: formData.riskLevel || 'low',
         status: 'Active',
-        create_by: 1 
       };
 
       const ropaUrl = isEditing ? `http://localhost:3340/ropa-records/${initialData.id}` : `http://localhost:3340/ropa-records`;
