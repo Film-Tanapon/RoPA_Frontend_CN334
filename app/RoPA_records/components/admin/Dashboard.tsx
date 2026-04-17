@@ -1,6 +1,5 @@
 "use client";
 import React from 'react';
-//adadad//
 export default function Dashboard() {
   return (
     <div className="flex flex-col h-full animate-in fade-in duration-500 overflow-y-auto pr-2 custom-scrollbar">

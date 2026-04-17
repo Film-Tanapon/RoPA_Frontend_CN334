@@ -1,51 +1,169 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function UserStep2({ onBack, onSubmit }: { onBack: () => void, onSubmit: (data: any) => void }) {
-  const [selectedRole, setSelectedRole] = useState('Viewer');
+export default function UserStep2({
+  onBack,
+  onSubmit,
+  initialRole,
+  initialStatus,
+  initialDepartment, // ✨ รับค่าแผนกเริ่มต้นมาด้วย
+  isEditMode
+}: {
+  onBack: () => void,
+  onSubmit: (data: any) => void,
+  initialRole?: string,
+  initialStatus?: string,
+  initialDepartment?: string, // ✨
+  isEditMode: boolean
+}) {
+  const [selectedRole, setSelectedRole] = useState(initialRole || 'Viewer');
+  const [selectedStatus, setSelectedStatus] = useState(initialStatus || 'Active');
+
+  // ✨ สร้าง State สำหรับเก็บแผนก
+  const [selectedDepartment, setSelectedDepartment] = useState(initialDepartment || '');
+
+  // Sync ค่าเมื่อมีการเปลี่ยน User ที่จะ Edit หรือเปลี่ยนโหมด
+  useEffect(() => {
+    if (initialRole) setSelectedRole(initialRole);
+    if (initialStatus) setSelectedStatus(initialStatus);
+    if (initialDepartment) setSelectedDepartment(initialDepartment);
+  }, [initialRole, initialStatus, initialDepartment]);
+
   const roles = [
     { title: 'Admin', desc: 'Full access to all settings and records' },
-    { title: 'Data Owner', desc: 'Can manage department records only' },
+    { title: 'Data Controller', desc: 'Can manage department records only' },
     { title: 'Viewer', desc: 'Read-only access to specific records' }
   ];
 
+  const statuses = [
+    { title: 'Active', desc: 'User can log in and access the system', color: 'bg-green-500' },
+    { title: 'Inactive', desc: 'Suspend user access to the system', color: 'bg-slate-300' }
+  ];
+
   return (
-    <div className="space-y-6 animate-in slide-in-from-right duration-300">
+    <div className="space-y-8 animate-in slide-in-from-right duration-300">
+
+      {/* --- Section 1: Role Selection --- */}
       <div className="space-y-4">
-        <label className="text-sm font-black text-slate-700 ml-1">Assign System Role</label>
-        <div className="grid grid-cols-1 gap-4">
+        <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <span className="w-1.5 h-6 bg-[#8B93C5] rounded-full"></span>
+          Assign User Role
+        </h3>
+
+        <div className="grid grid-cols-1 gap-3">
           {roles.map((role) => (
-            <label 
-              key={role.title} 
-              className={`flex items-center p-5 border-2 rounded-3xl cursor-pointer transition-all group ${
-                selectedRole === role.title ? 'border-[#8B93C5] bg-blue-50/30' : 'border-slate-100 hover:bg-slate-50'
-              }`}
-            >
-              <input 
-                type="radio" 
-                name="role" 
-                checked={selectedRole === role.title}
-                onChange={() => setSelectedRole(role.title)}
-                className="w-5 h-5 accent-[#8B93C5]" 
-              />
-              <div className="ml-4">
-                <p className="font-black text-slate-800">{role.title}</p>
-                <p className="text-xs text-slate-400 font-bold">{role.desc}</p>
+            <div key={role.title} className="flex flex-col gap-2">
+              {/* ตัวการ์ดสำหรับกดเลือก Role */}
+              <div
+                onClick={() => setSelectedRole(role.title)}
+                className={`p-5 rounded-[1.5rem] border-2 cursor-pointer transition-all flex items-center gap-4 ${selectedRole === role.title
+                    ? 'border-[#8B93C5] bg-[#F8F9FF] shadow-sm'
+                    : 'border-slate-100 hover:border-slate-200 bg-white'
+                  }`}
+              >
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedRole === role.title ? 'border-[#2D3663]' : 'border-slate-300'
+                  }`}>
+                  {selectedRole === role.title && (
+                    <div className="w-2.5 h-2.5 bg-[#2D3663] rounded-full" />
+                  )}
+                </div>
+                <div>
+                  <p className="font-black text-[#2D3663] text-sm">{role.title}</p>
+                  <p className="text-[11px] text-slate-400 font-medium">{role.desc}</p>
+                </div>
               </div>
-            </label>
+
+              {/* Conditional Rendering: ช่องเลือกแผนก จะโผล่มาใต้ Data Controller เท่านั้น */}
+              {role.title === 'Data Controller' && selectedRole === 'Data Controller' && (
+                <div className="ml-8 mt-1 mb-2 p-5 border-2 border-slate-100 rounded-[1.2rem] bg-slate-50 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <label className="text-sm font-black text-slate-700 ml-1">Select Department <span className="text-red-500">*</span></label>
+                  <select
+                    value={selectedDepartment}
+                    onChange={(e) => setSelectedDepartment(e.target.value)}
+                    className="mt-2 w-full p-3 bg-white border-2 border-slate-200 rounded-xl outline-none text-slate-900 focus:border-[#8B93C5] transition-all font-medium appearance-none"
+                  >
+                    <option value="" disabled>-- กรุณาเลือกแผนก --</option>
+                    <option value="ฝ่ายบริหาร">ฝ่ายบริหาร</option>
+                    <option value="ฝ่ายจัดซื้อ">ฝ่ายจัดซื้อ</option>
+                    <option value="ฝ่ายทรัพยากรบุคคล">ฝ่ายทรัพยากรบุคคล</option>
+                    <option value="ฝ่ายเทคโนโลยีสารสนเทศ">ฝ่ายเทคโนโลยีสารสนเทศ</option>
+                    <option value="ฝ่ายบัญชีและการเงิน">ฝ่ายบัญชีและการเงิน</option>
+                    <option value="ฝ่ายพัฒนาซอฟต์แวร์">ฝ่ายพัฒนาซอฟต์แวร์</option>
+                    <option value="ฝ่ายธุรการ">ฝ่ายธุรการ</option>
+                    <option value="ฝ่ายลูกค้าสัมพันธ์ / บริการลูกค้า">ฝ่ายลูกค้าสัมพันธ์ / บริการลูกค้า</option>
+                    <option value="ฝ่ายการตลาด">ฝ่ายการตลาด</option>
+                    <option value="ฝ่ายกฎหมายและกำกับการดูแล">ฝ่ายกฎหมายและกำกับการดูแล</option>
+                  </select>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </div>
 
-      <div className="flex justify-between pt-8">
-        <button onClick={onBack} className="px-10 py-4 text-slate-400 font-black hover:text-slate-600 transition-all">
+      {/* --- Section 2: Status Setting --- */}
+      <div className="space-y-4 pt-4 border-t border-slate-50">
+        <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <span className="w-1.5 h-6 bg-[#43934B] rounded-full"></span>
+          User Status
+        </h3>
+
+        <div className="flex gap-4">
+          {statuses.map((status) => (
+            <div
+              key={status.title}
+              onClick={() => setSelectedStatus(status.title)}
+              className={`flex-1 p-4 rounded-[1.2rem] border-2 cursor-pointer transition-all flex flex-col gap-2 ${selectedStatus === status.title
+                  ? 'border-[#43934B] bg-green-50/30'
+                  : 'border-slate-100 bg-white'
+                }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${status.color}`}></div>
+                  <p className={`font-black text-sm ${selectedStatus === status.title ? 'text-[#43934B]' : 'text-slate-500'}`}>
+                    {status.title}
+                  </p>
+                </div>
+                {selectedStatus === status.title && (
+                  <div className="w-5 h-5 bg-[#43934B] rounded-full flex items-center justify-center">
+                    <span className="text-white text-[10px]">✓</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-[10px] text-slate-400 leading-relaxed">
+                {status.desc}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* --- Action Buttons --- */}
+      <div className="flex justify-between items-center pt-6">
+        <button
+          onClick={onBack}
+          className="text-slate-400 font-bold hover:text-slate-600 transition-colors flex items-center gap-2"
+        >
           ← Back
         </button>
-        <button 
-          onClick={() => onSubmit({ role: selectedRole })} 
-          className="px-12 py-4 bg-green-500 text-white rounded-full font-black shadow-lg hover:bg-green-600 active:scale-95 transition-all"
+        <button
+          onClick={() => onSubmit({
+            role: selectedRole,
+            status: selectedStatus,
+            // ✨ ส่งค่าแผนกกลับไปเฉพาะตอนที่เป็น Data Controller นอกนั้นส่งค่าว่าง
+            departments: selectedRole === 'Data Controller' ? selectedDepartment : ''
+          })}
+          // ✨ ปิดปุ่มไว้ถ้าเลือก Data Controller แต่ยังไม่เลือกแผนก
+          disabled={selectedRole === 'Data Controller' && !selectedDepartment}
+          className={`px-12 py-3.5 rounded-full font-black shadow-lg transition-all text-white flex items-center gap-2 ${(selectedRole === 'Data Controller' && !selectedDepartment)
+              ? 'bg-slate-300 shadow-none cursor-not-allowed'
+              : isEditMode
+                ? 'bg-[#43934B] hover:bg-green-700 hover:scale-105 active:scale-95'
+                : 'bg-green-500 hover:bg-green-600 hover:scale-105 active:scale-95'
+            }`}
         >
-          Complete & Save
+          {isEditMode ? 'Update & Save' : 'Create User'}
         </button>
       </div>
     </div>

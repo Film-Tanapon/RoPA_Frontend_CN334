@@ -1,33 +1,73 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
-import MainForm from './components/processing_activity/step2_mainForm';
+import MainForm from './components/processing_activity/step1';
 import UserManagement from './components/admin/create_user_form/UserManagement'; 
-
-const mockData = [
-  { id: 'PA-001', name: 'Employee Payroll', category: 'HR', legalBasis: 'Contract' },
-  { id: 'PA-002', name: 'Customer Marketing', category: 'Marketing', legalBasis: 'Consent' },
-  { id: 'PA-003', name: 'CCTV Surveillance', category: 'Security', legalBasis: 'Vital Interest' },
-];
 
 export default function RoPARecordsPage() {
   const [activeMenu, setActiveMenu] = useState('RoPA Records');
   const [isCreating, setIsCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [records, setRecords] = useState<any[]>([]); 
 
-  const filteredData = mockData.filter((item) =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.category.toLowerCase().includes(searchTerm.toLowerCase())
+  const API_URL = "http://localhost:3340/ropa-records";
+
+  const loadRecords = async () => {
+    try {
+      const res = await fetch(API_URL, { cache: 'no-store' }); 
+      if (res.ok) {
+        const data = await res.json();
+        setRecords(Array.isArray(data) ? data : data.data || data.records || []);
+      } else {
+        console.error("ไม่สามารถดึงข้อมูล RoPA ได้");
+      }
+    } catch (error) {
+      console.error("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้:", error);
+    }
+  };
+
+  useEffect(() => {
+    loadRecords();
+  }, []);
+
+  const filteredData = records.filter((item) =>
+    (item.activityName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.id?.toString() || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.category || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleDeleteSelected = async () => {
+    if (!window.confirm(`คุณต้องการลบข้อมูล ${selectedIds.length} รายการที่เลือกใช่หรือไม่? การกระทำนี้ไม่สามารถเรียกคืนได้`)) return;
+    
+    try {
+      const token = localStorage.getItem("access_token");
+      for (const id of selectedIds) {
+        // 👈 แก้ไขตรงนี้: เปลี่ยน URL เป็น ropa-record (ไม่มี s) ให้ตรงกับ Backend
+        await fetch(`http://localhost:3340/ropa-record/${id}`, {
+          method: "DELETE",
+          headers: { 
+            "Authorization": `Bearer ${token}` 
+          }
+        });
+      }
+      
+      alert("ลบข้อมูลสำเร็จ!");
+      setSelectedIds([]); 
+      loadRecords(); 
+    } catch (error) {
+      console.error("Error deleting data:", error);
+      alert("เกิดข้อผิดพลาดในการลบข้อมูล");
+    }
+  };
+
   const renderContent = () => {
-    // --- 2. แก้ไข Logic: เช็คเมนู User Management ก่อนเป็นอันดับแรก ---
     if (activeMenu === 'User Management') {
       return <UserManagement searchTerm={searchTerm} setSearchTerm={setSearchTerm} />;
     }
 
-    // ส่วนของ Dashboard หรือเมนูอื่นๆ ที่ยังไม่ทำ
     if (activeMenu === 'Dashboard') {
         return (
           <div className="flex flex-col h-full items-center justify-center animate-in fade-in duration-500">
@@ -37,7 +77,6 @@ export default function RoPARecordsPage() {
         );
     }
 
-    // --- 3. ปรับเงื่อนไข Default (Coming Soon) ให้ไปอยู่ท้ายสุด ---
     if (activeMenu !== 'RoPA Records') {
       return (
         <div className="flex flex-col h-full items-center justify-center animate-in fade-in duration-500">
@@ -47,63 +86,167 @@ export default function RoPARecordsPage() {
       );
     }
 
-    if (isCreating) {
-      return <MainForm onCancel={() => setIsCreating(false)} />;
+    if (isCreating || editingItem) {
+      return (
+        <MainForm 
+          initialData={editingItem}
+          onCancel={() => { 
+            setIsCreating(false); 
+            setEditingItem(null); 
+          }} 
+          onSuccess={() => { 
+            setIsCreating(false); 
+            setEditingItem(null);
+            setSelectedIds([]); 
+            loadRecords(); 
+          }} 
+        />
+      );
     }
 
-    // หน้าหลัก RoPA Records
     return (
       <div className="flex flex-col h-full animate-in fade-in duration-500">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-black text-slate-900">{activeMenu}</h1>
-          <div className="flex items-center gap-4 w-1/2 justify-end">
-            <div className="relative w-full max-w-md">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+        
+        {/* --- Top Toolbar --- */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div className="flex flex-wrap items-center gap-3 flex-1">
+            <div className="relative w-full max-w-[320px]">
+              <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">🔍</span>
               <input 
                 type="text" 
-                placeholder="Search by name, ID or category..." 
+                placeholder="ค้นหากิจกรรม, ID หรือหมวดหมู่..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-100 rounded-full outline-none focus:border-[#8B93C5] transition-all shadow-sm font-medium text-slate-950"
+                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-full text-sm outline-none shadow-sm focus:ring-2 focus:ring-[#8B93C5]/20 text-slate-800"
               />
             </div>
+            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-full text-xs font-bold text-slate-500 hover:bg-slate-50">
+               <img src="https://www.svgrepo.com/show/532130/filter.svg" alt="filter" className="w-4 h-4 opacity-50" /> filter ▾
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button className="flex items-center gap-2 px-5 py-2 bg-white border border-slate-300 rounded-full text-sm font-bold text-slate-500 shadow-sm hover:bg-slate-50">
+              <img src="https://www.svgrepo.com/show/521713/download.svg" alt="import" className="w-4 h-4 opacity-50" /> import
+            </button>
             <button 
-              onClick={() => setIsCreating(true)}
-              className="bg-[#8B93C5] hover:bg-[#7a82b5] text-white px-8 py-3 rounded-full font-bold shadow-md transition-all active:scale-95 whitespace-nowrap"
+              onClick={() => { setIsCreating(true); setEditingItem(null); }}
+              className="flex items-center gap-2 px-6 py-2 bg-[#8B93C5] text-white rounded-full font-bold shadow-md hover:bg-[#7a82b5] transition-all"
             >
               + New
             </button>
           </div>
         </div>
 
-        <div className="flex-1 bg-white rounded-t-[2.5rem] border-2 border-slate-100 overflow-hidden flex flex-col shadow-sm">
-          <div className="px-8 py-4 bg-[#D9E8F6] w-fit rounded-tr-[1.5rem] border-b-2 border-[#D9E8F6]">
-            <span className="text-[#2D3663] font-bold">Processing Activities</span>
+        {/* --- Main Table Area --- */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Tab Header */}
+          <div className="flex">
+            <div className="px-6 py-2.5 bg-[#E9F2F9] border border-slate-300 border-b-0 text-[#2D3663] font-bold text-sm">
+              บันทึกรายการกิจกรรมการประมวลผล
+            </div>
+            <div className="flex-1 border-b border-slate-300"></div>
           </div>
-          <div className="flex-1 overflow-auto custom-scrollbar">
-            <table className="w-full text-left">
-              <thead className="bg-[#E7F3FF] sticky top-0 z-10">
+          
+          {/* ✨ Bulk Action Toolbar */}
+          {selectedIds.length > 0 && (
+            <div className="bg-[#F8FAFC] border-x border-b border-slate-300 px-6 py-3 flex items-center justify-between transition-all animate-in fade-in">
+              <div className="flex items-center gap-3">
+                <span className="text-[#1E2A5E] font-bold text-[14px]">
+                  เลือกแล้ว {selectedIds.length} รายการ
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => {
+                    if (selectedIds.length > 1) {
+                      alert('กรุณาเลือกแก้ไขทีละ 1 รายการ');
+                    } else {
+                      const itemToEdit = records.find(r => r.id === selectedIds[0]);
+                      setEditingItem(itemToEdit);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 bg-[#F59E0B] text-white font-bold text-[13px] hover:bg-[#D97706] px-5 py-2 rounded-full transition-colors shadow-sm"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  แก้ไข
+                </button>
+
+                <button 
+                  onClick={handleDeleteSelected}
+                  className="flex items-center gap-1.5 bg-[#EF4444] text-white font-bold text-[13px] hover:bg-[#DC2626] px-5 py-2 rounded-full transition-colors shadow-sm"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  ลบที่เลือก
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Table Container */}
+          <div className="flex-1 bg-[#F4F9FD] border-x border-b border-slate-300 overflow-auto custom-scrollbar">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead className="bg-[#E9F2F9] sticky top-0 z-10 shadow-sm">
                 <tr>
-                  <th className="p-5 font-bold text-[#2D3663]">ID</th>
-                  <th className="p-5 font-bold text-[#2D3663]">Activity Name</th>
-                  <th className="p-5 font-bold text-[#2D3663]">Category</th>
-                  <th className="p-5 font-bold text-[#2D3663]">Legal Basis</th>
+                  <th className="p-4 w-12 text-center border-b border-slate-200">
+                    <input 
+                      type="checkbox" 
+                      className="rounded-sm w-4 h-4 cursor-pointer"
+                      checked={selectedIds.length === filteredData.length && filteredData.length > 0}
+                      onChange={(e) => setSelectedIds(e.target.checked ? filteredData.map(d => d.id) : [])}
+                    />
+                  </th>
+                  <th className="p-4 font-bold text-[#2D3663] text-[13px] border-b border-slate-200">ID</th>
+                  <th className="p-4 font-bold text-[#2D3663] text-[13px] border-b border-slate-200">ชื่อกิจกรรม</th>
+                  <th className="p-4 font-bold text-[#2D3663] text-[13px] border-b border-slate-200">เจ้าของข้อมูล</th>
+                  <th className="p-4 font-bold text-[#2D3663] text-[13px] border-b border-slate-200">หมวดหมู่กิจกรรม</th>
+                  <th className="p-4 font-bold text-[#2D3663] text-[13px] text-center border-b border-slate-200">ระดับความเสี่ยง</th>
+                  <th className="p-4 font-bold text-[#2D3663] text-[13px] text-center border-b border-slate-200">สถานะ</th>
+                  <th className="p-4 font-bold text-[#2D3663] text-[13px] border-b border-slate-200">วันที่เพิ่ม</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 bg-white">
                 {filteredData.length > 0 ? (
                   filteredData.map((item) => (
-                    <tr key={item.id} className="border-b hover:bg-slate-50 transition-colors">
-                      <td className="p-5 font-bold text-slate-500">{item.id}</td>
-                      <td className="p-5 font-bold text-[#2D3663]">{item.name}</td>
-                      <td className="p-5 text-slate-600">{item.category}</td>
-                      <td className="p-5 text-slate-600">{item.legalBasis}</td>
+                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-4 text-center">
+                        <input 
+                          type="checkbox" 
+                          className="rounded-sm w-4 h-4 cursor-pointer"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={() => setSelectedIds(prev => prev.includes(item.id) ? prev.filter(i => i !== item.id) : [...prev, item.id])}
+                        />
+                      </td>
+                      <td className="p-4 text-slate-500 font-medium">{item.id || '-'}</td>
+                      <td className="p-4 font-bold text-[#2D3663]">{item.activityName || '-'}</td>
+                      <td className="p-4 text-slate-600">{item.dataSubject || '-'}</td>
+                      <td className="p-4 text-slate-600">{item.category || '-'}</td>
+                      <td className="p-4 text-center">
+                        <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${
+                          item.riskLevel === 'สูง' ? 'bg-red-100 text-red-600' :
+                          item.riskLevel === 'ปานกลาง' ? 'bg-amber-100 text-amber-600' :
+                          'bg-green-100 text-green-600'
+                        }`}>
+                          {item.riskLevel || 'ไม่ระบุ'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <div className={`w-2 h-2 rounded-full ${item.status === 'Active' ? 'bg-green-500' : 'bg-slate-300'}`}></div>
+                          <span className={`text-[12px] font-bold ${item.status === 'Active' ? 'text-green-600' : 'text-slate-400'}`}>
+                            {item.status || 'Active'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-4 text-slate-500">
+                        {item.dateAdded ? new Date(item.dateAdded).toLocaleDateString('th-TH') : '-'}
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} className="p-20 text-center text-slate-400 italic font-bold">
-                      No results found for "{searchTerm}"
+                    <td colSpan={8} className="p-16 text-center text-slate-400 italic font-bold bg-white">
+                      ไม่พบข้อมูล
                     </td>
                   </tr>
                 )}
@@ -111,6 +254,7 @@ export default function RoPARecordsPage() {
             </table>
           </div>
         </div>
+
       </div>
     );
   };
@@ -120,6 +264,8 @@ export default function RoPARecordsPage() {
       <Sidebar activeMenu={activeMenu} setActiveMenu={(menu) => {
         setActiveMenu(menu);
         setIsCreating(false); 
+        setEditingItem(null); 
+        setSelectedIds([]); 
       }} />
 
       <div className="flex-1 p-0 bg-white">
