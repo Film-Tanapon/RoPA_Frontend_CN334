@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 interface CombinedFormProps {
   onCancel: () => void;
   onSuccess?: () => void;
-  initialData?: any; // เพิ่ม initialData เพื่อแยกว่าเป็นการสร้างใหม่หรือแก้ไข
+  initialData?: any; 
 }
 
 export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: CombinedFormProps) {
@@ -50,13 +50,11 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // ป้องกัน Error ตอน split() หากข้อมูลเก่ามีค่าเป็น null, undefined หรือ '-'
   const safeSplit = (str: string | undefined | null) => {
     if (!str || str === '-' || str === '[]') return [];
     return str.split(', ').filter(item => item.trim() !== '');
   };
 
-  // ดึงข้อมูล Transfer และ Security หากเป็นการแก้ไข
   useEffect(() => {
     const fetchRelatedData = async () => {
       if (!initialData?.id) return;
@@ -64,38 +62,43 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
       const headers = { "Authorization": `Bearer ${token}` };
 
       try {
-        // ดึงข้อมูล Transfers
         const resTransfer = await fetch(`http://localhost:3340/transfers/${initialData.id}`, { headers });
         let transferData = null;
         if (resTransfer.ok) {
           const tJson = await resTransfer.json();
-          transferData = tJson.data;
+          transferData = tJson.data || tJson;
         }
 
-        // ดึงข้อมูล Security
+        // 🌟 แก้ไข: ดึงข้อมูล Security ที่เป็น Array มาจัดการใหม่
         const resSecurity = await fetch(`http://localhost:3340/security/${initialData.id}`, { headers });
-        let securityData = null;
+        let securityData: any[] = [];
         if (resSecurity.ok) {
           const sJson = await resSecurity.json();
-          securityData = sJson.data;
+          securityData = Array.isArray(sJson.data) ? sJson.data : (Array.isArray(sJson) ? sJson : []);
         }
+
+        // แปลง Array จาก Backend ให้กลับมาเป็น Object เพื่อใส่ในฟอร์มหน้าเว็บ
+        let secMap: Record<string, string> = {};
+        securityData.forEach(sec => { 
+          secMap[sec.measure_type] = sec.description; 
+        });
 
         setFormData(prev => ({
           ...prev,
-          // ข้อมูล Transfers
-          destinationCountry: transferData?.destination_country !== '-' ? (transferData?.destination_country || '') : '',
-          transferAffiliate: transferData?.transfer_affiliate === 'yes' ? 'yes' : 'no',
+          // 🌟 แก้ไข: Map ตัวแปร Transfers ให้ตรงกับ schemas.py
+          destinationCountry: transferData?.country !== '-' ? (transferData?.country || '') : '',
+          transferAffiliate: transferData?.recipient_name === 'yes' ? 'yes' : 'no',
           transferMethod: transferData?.transfer_method !== '-' ? (transferData?.transfer_method || '') : '',
           protectionMeasure: transferData?.protection_measure !== '-' ? (transferData?.protection_measure || '') : '',
-          exceptionArt28: transferData?.exception_art_28 !== '-' ? (transferData?.exception_art_28 || '') : '',
+          exceptionArt28: transferData?.protection_std !== '-' ? (transferData?.protection_std || '') : '',
           
-          // ข้อมูล Security
-          orgMeasure: securityData?.org_measure !== '-' ? (securityData?.org_measure || '') : '',
-          techMeasure: securityData?.tech_measure !== '-' ? (securityData?.tech_measure || '') : '',
-          physicalMeasure: securityData?.physical_measure !== '-' ? (securityData?.physical_measure || '') : '',
-          accessControl: securityData?.access_control !== '-' ? (securityData?.access_control || '') : '',
-          userResponsibility: securityData?.user_responsibility !== '-' ? (securityData?.user_responsibility || '') : '',
-          auditMeasure: securityData?.audit_measure !== '-' ? (securityData?.audit_measure || '') : ''
+          // 🌟 แก้ไข: Map ตัวแปร Security จาก Loop
+          orgMeasure: secMap['org_measure'] && secMap['org_measure'] !== '-' ? secMap['org_measure'] : '',
+          techMeasure: secMap['tech_measure'] && secMap['tech_measure'] !== '-' ? secMap['tech_measure'] : '',
+          physicalMeasure: secMap['physical_measure'] && secMap['physical_measure'] !== '-' ? secMap['physical_measure'] : '',
+          accessControl: secMap['access_control'] && secMap['access_control'] !== '-' ? secMap['access_control'] : '',
+          userResponsibility: secMap['user_responsibility'] && secMap['user_responsibility'] !== '-' ? secMap['user_responsibility'] : '',
+          auditMeasure: secMap['audit_measure'] && secMap['audit_measure'] !== '-' ? secMap['audit_measure'] : ''
         }));
       } catch (err) {
         console.error("Failed to fetch related data:", err);
@@ -128,7 +131,6 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
         riskLevel: initialData.risk_level || 'low',
       }));
 
-      // เรียกฟังก์ชันดึงตารางลูก
       fetchRelatedData();
     }
   }, [initialData]);
@@ -150,19 +152,15 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
 
   const handleDelete = async () => {
     if (!initialData || !initialData.id) return;
-    
     const confirmDelete = window.confirm("คุณต้องการลบข้อมูลกิจกรรมนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถเรียกคืนได้");
     if (!confirmDelete) return;
 
     setIsDeleting(true);
     try {
       const token = localStorage.getItem("access_token");
-      // แก้ไข Endpoint ให้เป็น /ropa-record/{id} ไม่มี s
       const res = await fetch(`http://localhost:3340/ropa-records/${initialData.id}`, {
         method: "DELETE",
-        headers: { 
-          "Authorization": `Bearer ${token}` 
-        }
+        headers: { "Authorization": `Bearer ${token}` }
       });
 
       if (res.ok) {
@@ -191,7 +189,7 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
       };
       const isEditing = !!initialData; 
 
-      // 1. ================= เตรียมข้อมูล ROPA =================
+      // 1. ================= เตรียมข้อมูล ROPA (ไม่มีปัญหา ตรงกันเป๊ะ) =================
       const ropaPayload = {
         activity_name: formData.activityName || '-',
         purpose: formData.purpose || '-',
@@ -218,10 +216,7 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
         create_by: 1 
       };
 
-      const ropaUrl = isEditing 
-        ? `http://localhost:3340/ropa-records/${initialData.id}` 
-        : `http://localhost:3340/ropa-records`;
-      
+      const ropaUrl = isEditing ? `http://localhost:3340/ropa-records/${initialData.id}` : `http://localhost:3340/ropa-records`;
       const ropaRes = await fetch(ropaUrl, {
         method: isEditing ? "PUT" : "POST",
         headers,
@@ -236,56 +231,67 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
       if (!ropaRes.ok) throw new Error("เกิดข้อผิดพลาดในการบันทึก ROPA");
 
       const ropaResponseData = await ropaRes.json();
-      // ดึง ID ของ ROPA มาใช้ต่อ ไม่ว่าจะเป็นการสร้างใหม่หรืออัปเดต
       const targetRopaId = isEditing ? initialData.id : ropaResponseData.data.id;
 
-      // 2. ================= จัดการ Transfers =================
+      // 2. ================= จัดการ Transfers 🌟 แก้ไขชื่อตัวแปรให้ตรง Schema =================
       if (formData.transferAbroad === 'yes') {
         const transferPayload = {
           ropa_id: targetRopaId,
-          destination_country: formData.destinationCountry || '-',
-          transfer_affiliate: formData.transferAffiliate,
+          country: formData.destinationCountry || '-',            // ตรงกับ schemas.py
+          recipient_name: formData.transferAffiliate,             // ตรงกับ schemas.py
           transfer_method: formData.transferMethod || '-',
-          protection_measure: formData.protectionMeasure || '-',
-          exception_art_28: formData.exceptionArt28 || '-'
+          protection_std: formData.exceptionArt28 || '-',         // ตรงกับ schemas.py
+          protection_measure: formData.protectionMeasure || '-'
         };
 
-        // เช็คว่ามีข้อมูล Transfer เดิมอยู่หรือไม่
         const checkTransferRes = await fetch(`http://localhost:3340/transfers/${targetRopaId}`, { headers });
         if (checkTransferRes.ok) {
           const existingTransfer = await checkTransferRes.json();
-          await fetch(`http://localhost:3340/transfers/${existingTransfer.data.id}`, {
-            method: "PUT", headers, body: JSON.stringify(transferPayload)
-          });
+          const transferId = existingTransfer.data?.id || existingTransfer.id;
+          if (transferId) {
+             await fetch(`http://localhost:3340/transfers/${transferId}`, { method: "PUT", headers, body: JSON.stringify(transferPayload) });
+          }
         } else {
-          await fetch(`http://localhost:3340/transfers`, {
-            method: "POST", headers, body: JSON.stringify(transferPayload)
-          });
+          await fetch(`http://localhost:3340/transfers`, { method: "POST", headers, body: JSON.stringify(transferPayload) });
         }
       }
 
-      // 3. ================= จัดการ Security Measures =================
-      const securityPayload = {
-        ropa_id: targetRopaId,
-        org_measure: formData.orgMeasure || '-',
-        tech_measure: formData.techMeasure || '-',
-        physical_measure: formData.physicalMeasure || '-',
-        access_control: formData.accessControl || '-',
-        user_responsibility: formData.userResponsibility || '-',
-        audit_measure: formData.auditMeasure || '-'
-      };
+      // 3. ================= จัดการ Security Measures 🌟 เปลี่ยนเป็น Loop ตามโครงสร้าง =================
+      const securityFields = [
+        { measure_type: 'org_measure', description: formData.orgMeasure || '-' },
+        { measure_type: 'tech_measure', description: formData.techMeasure || '-' },
+        { measure_type: 'physical_measure', description: formData.physicalMeasure || '-' },
+        { measure_type: 'access_control', description: formData.accessControl || '-' },
+        { measure_type: 'user_responsibility', description: formData.userResponsibility || '-' },
+        { measure_type: 'audit_measure', description: formData.auditMeasure || '-' }
+      ];
 
-      // เช็คว่ามีข้อมูล Security เดิมอยู่หรือไม่
+      // ดึงข้อมูลเดิมมาเช็คว่าต้อง Update หรือ Create
       const checkSecurityRes = await fetch(`http://localhost:3340/security/${targetRopaId}`, { headers });
+      let existingSecurities: any[] = [];
       if (checkSecurityRes.ok) {
-        const existingSecurity = await checkSecurityRes.json();
-        await fetch(`http://localhost:3340/security/${existingSecurity.data.id}`, {
-          method: "PUT", headers, body: JSON.stringify(securityPayload)
-        });
-      } else {
-        await fetch(`http://localhost:3340/security`, {
-          method: "POST", headers, body: JSON.stringify(securityPayload)
-        });
+        const sJson = await checkSecurityRes.json();
+        existingSecurities = Array.isArray(sJson.data) ? sJson.data : (Array.isArray(sJson) ? sJson : []);
+      }
+
+      // ทำการเซฟทีละหัวข้อ (เนื่องจาก backend ออกแบบมาเป็น measure_type)
+      for (const field of securityFields) {
+        const existing = existingSecurities.find(s => s.measure_type === field.measure_type);
+        if (existing) {
+          // ถ้ามีอยู่แล้วให้ Update
+          await fetch(`http://localhost:3340/security/${existing.id}`, {
+            method: "PUT", 
+            headers, 
+            body: JSON.stringify({ measure_type: field.measure_type, description: field.description })
+          });
+        } else {
+          // ถ้ายังไม่มีให้ Create ใหม่
+          await fetch(`http://localhost:3340/security`, {
+            method: "POST", 
+            headers, 
+            body: JSON.stringify({ ropa_id: targetRopaId, measure_type: field.measure_type, description: field.description })
+          });
+        }
       }
 
       alert(isEditing ? "อัปเดตข้อมูลสำเร็จ!" : "บันทึกข้อมูลสำเร็จ!");

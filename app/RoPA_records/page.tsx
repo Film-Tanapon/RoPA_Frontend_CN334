@@ -33,10 +33,11 @@ export default function RoPARecordsPage() {
     loadRecords();
   }, []);
 
+  // 🌟 แก้ไข: ตัวแปรสำหรับการค้นหา
   const filteredData = records.filter((item) =>
-    (item.activityName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.activity_name || item.activityName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (item.id?.toString() || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.category || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (item.data_category || item.category || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleDeleteSelected = async () => {
@@ -45,7 +46,6 @@ export default function RoPARecordsPage() {
     try {
       const token = localStorage.getItem("access_token");
       for (const id of selectedIds) {
-        // 👈 แก้ไขตรงนี้: เปลี่ยน URL เป็น ropa-record (ไม่มี s) ให้ตรงกับ Backend
         await fetch(`http://localhost:3340/ropa-record/${id}`, {
           method: "DELETE",
           headers: { 
@@ -218,16 +218,19 @@ export default function RoPARecordsPage() {
                         />
                       </td>
                       <td className="p-4 text-slate-500 font-medium">{item.id || '-'}</td>
-                      <td className="p-4 font-bold text-[#2D3663]">{item.activityName || '-'}</td>
-                      <td className="p-4 text-slate-600">{item.dataSubject || '-'}</td>
-                      <td className="p-4 text-slate-600">{item.category || '-'}</td>
+                      
+                      {/* 🌟 แก้ไข: ตัวแปรสำหรับการแสดงผลตาราง */}
+                      <td className="p-4 font-bold text-[#2D3663]">{item.activity_name || item.activityName || '-'}</td>
+                      <td className="p-4 text-slate-600">{item.data_subject || item.dataSubject || '-'}</td>
+                      <td className="p-4 text-slate-600">{item.data_category || item.category || '-'}</td>
+                      
                       <td className="p-4 text-center">
                         <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${
-                          item.riskLevel === 'สูง' ? 'bg-red-100 text-red-600' :
-                          item.riskLevel === 'ปานกลาง' ? 'bg-amber-100 text-amber-600' :
+                          (item.risk_level || item.riskLevel) === 'สูง' ? 'bg-red-100 text-red-600' :
+                          (item.risk_level || item.riskLevel) === 'ปานกลาง' ? 'bg-amber-100 text-amber-600' :
                           'bg-green-100 text-green-600'
                         }`}>
-                          {item.riskLevel || 'ไม่ระบุ'}
+                          {item.risk_level || item.riskLevel || 'ไม่ระบุ'}
                         </span>
                       </td>
                       <td className="p-4 text-center">
@@ -239,7 +242,8 @@ export default function RoPARecordsPage() {
                         </div>
                       </td>
                       <td className="p-4 text-slate-500">
-                        {item.dateAdded ? new Date(item.dateAdded).toLocaleDateString('th-TH') : '-'}
+                        {/* ดึงวันที่จากตัวใดตัวหนึ่ง ถ้าไม่มีก็แสดง - */}
+                        {item.create_date || item.dateAdded ? new Date(item.create_date || item.dateAdded).toLocaleDateString('th-TH') : '-'}
                       </td>
                     </tr>
                   ))
