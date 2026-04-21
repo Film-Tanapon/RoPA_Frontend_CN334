@@ -6,33 +6,34 @@ export default function UserStep2({
   onSubmit,
   initialRole,
   initialStatus,
-  initialDepartment, // ✨ รับค่าแผนกเริ่มต้นมาด้วย
+  initialDepartment,
   isEditMode
 }: {
   onBack: () => void,
   onSubmit: (data: any) => void,
   initialRole?: string,
   initialStatus?: string,
-  initialDepartment?: string, // ✨
+  initialDepartment?: string,
   isEditMode: boolean
 }) {
   const [selectedRole, setSelectedRole] = useState(initialRole || 'Viewer');
   const [selectedStatus, setSelectedStatus] = useState(initialStatus || 'Active');
-
-  // ✨ สร้าง State สำหรับเก็บแผนก
   const [selectedDepartment, setSelectedDepartment] = useState(initialDepartment || '');
 
-  // Sync ค่าเมื่อมีการเปลี่ยน User ที่จะ Edit หรือเปลี่ยนโหมด
   useEffect(() => {
     if (initialRole) setSelectedRole(initialRole);
     if (initialStatus) setSelectedStatus(initialStatus);
     if (initialDepartment) setSelectedDepartment(initialDepartment);
   }, [initialRole, initialStatus, initialDepartment]);
 
+  // ใช้ Role ใหม่ตามที่คุณระบุไว้
   const roles = [
-    { title: 'Admin', desc: 'Full access to all settings and records' },
-    { title: 'Data Controller', desc: 'Can manage department records only' },
-    { title: 'Viewer', desc: 'Read-only access to specific records' }
+    { title: 'Data Controller' },
+    { title: 'Data Processor' },
+    { title: 'DPO(Data Protection Officer)' },
+    { title: 'Admin' },
+    { title: 'Auditor' },
+    { title: 'Excutive' }
   ];
 
   const statuses = [
@@ -53,7 +54,6 @@ export default function UserStep2({
         <div className="grid grid-cols-1 gap-3">
           {roles.map((role) => (
             <div key={role.title} className="flex flex-col gap-2">
-              {/* ตัวการ์ดสำหรับกดเลือก Role */}
               <div
                 onClick={() => setSelectedRole(role.title)}
                 className={`p-5 rounded-[1.5rem] border-2 cursor-pointer transition-all flex items-center gap-4 ${selectedRole === role.title
@@ -69,11 +69,10 @@ export default function UserStep2({
                 </div>
                 <div>
                   <p className="font-black text-[#2D3663] text-sm">{role.title}</p>
-                  <p className="text-[11px] text-slate-400 font-medium">{role.desc}</p>
                 </div>
               </div>
 
-              {/* Conditional Rendering: ช่องเลือกแผนก จะโผล่มาใต้ Data Controller เท่านั้น */}
+              {/* Conditional Rendering ช่องไว้เลือกแผนก */}
               {role.title === 'Data Controller' && selectedRole === 'Data Controller' && (
                 <div className="ml-8 mt-1 mb-2 p-5 border-2 border-slate-100 rounded-[1.2rem] bg-slate-50 animate-in fade-in slide-in-from-top-2 duration-300">
                   <label className="text-sm font-black text-slate-700 ml-1">Select Department <span className="text-red-500">*</span></label>
@@ -151,10 +150,8 @@ export default function UserStep2({
           onClick={() => onSubmit({
             role: selectedRole,
             status: selectedStatus,
-            // ✨ ส่งค่าแผนกกลับไปเฉพาะตอนที่เป็น Data Controller นอกนั้นส่งค่าว่าง
-            departments: selectedRole === 'Data Controller' ? selectedDepartment : ''
+            departments: selectedRole === 'Data Controller' ? selectedDepartment : 'None'
           })}
-          // ✨ ปิดปุ่มไว้ถ้าเลือก Data Controller แต่ยังไม่เลือกแผนก
           disabled={selectedRole === 'Data Controller' && !selectedDepartment}
           className={`px-12 py-3.5 rounded-full font-black shadow-lg transition-all text-white flex items-center gap-2 ${(selectedRole === 'Data Controller' && !selectedDepartment)
               ? 'bg-slate-300 shadow-none cursor-not-allowed'

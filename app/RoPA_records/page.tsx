@@ -3,6 +3,10 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import MainForm from './components/processing_activity/step1';
 import UserManagement from './components/admin/create_user_form/UserManagement'; 
+import Feedback from './components/Feedback/Feedback'; 
+
+// 🌟 1. นำเข้าไฟล์ Dashboard ตามโครงสร้างโฟลเดอร์ของคุณ
+import Dashboard from './components/Dashboard/Dashboard';
 
 export default function RoPARecordsPage() {
   const [activeMenu, setActiveMenu] = useState('RoPA Records');
@@ -33,7 +37,6 @@ export default function RoPARecordsPage() {
     loadRecords();
   }, []);
 
-  // 🌟 แก้ไข: ตัวแปรสำหรับการค้นหา
   const filteredData = records.filter((item) =>
     (item.activity_name || item.activityName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (item.id?.toString() || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -48,9 +51,7 @@ export default function RoPARecordsPage() {
       let successCount = 0;
       let failCount = 0;
 
-      // วนลูปลบทีละรายการ
       for (const id of selectedIds) {
-        // 👈 เช็ค URL ให้ตรงกับ Backend ของคุณนะครับ (มี s หรือไม่มี s)
         const res = await fetch(`http://localhost:3340/ropa-records/${id}`, {
           method: "DELETE",
           headers: { 
@@ -58,7 +59,6 @@ export default function RoPARecordsPage() {
           }
         });
 
-        // 🌟 เช็คว่าลบผ่านจริงๆ ไหม
         if (res.ok) {
           successCount++;
         } else {
@@ -66,7 +66,6 @@ export default function RoPARecordsPage() {
         }
       }
       
-      // สรุปผลการลบ
       if (failCount > 0) {
         alert(`ลบไม่สำเร็จ ${failCount} รายการ \n(ข้อมูลอาจถูกใช้งานอยู่ หรือเซิร์ฟเวอร์มีปัญหา)`);
       } else {
@@ -80,20 +79,22 @@ export default function RoPARecordsPage() {
       alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
     }
   };
+
   const renderContent = () => {
     if (activeMenu === 'User Management') {
       return <UserManagement searchTerm={searchTerm} setSearchTerm={setSearchTerm} />;
     }
 
+    // 🌟 2. แก้ไขให้แสดงผล Component <Dashboard /> แทนข้อความเดิม
     if (activeMenu === 'Dashboard') {
-        return (
-          <div className="flex flex-col h-full items-center justify-center animate-in fade-in duration-500">
-            <h1 className="text-4xl font-black text-slate-900 mb-4">Dashboard</h1>
-            <p className="text-slate-400 font-bold italic">Dashboard metrics are coming soon...</p>
-          </div>
-        );
+        return <Dashboard />;
     }
 
+    if (activeMenu === 'Feedback') {
+      return <Feedback />;
+    }
+
+    // (อันนี้ปล่อยไว้เหมือนเดิม สำหรับดักเมนูอื่นๆ ที่ยังไม่เคยสร้างหน้า)
     if (activeMenu !== 'RoPA Records') {
       return (
         <div className="flex flex-col h-full items-center justify-center animate-in fade-in duration-500">
@@ -165,7 +166,6 @@ export default function RoPARecordsPage() {
             <div className="flex-1 border-b border-slate-300"></div>
           </div>
           
-          {/* ✨ Bulk Action Toolbar */}
           {selectedIds.length > 0 && (
             <div className="bg-[#F8FAFC] border-x border-b border-slate-300 px-6 py-3 flex items-center justify-between transition-all animate-in fade-in">
               <div className="flex items-center gap-3">
@@ -236,7 +236,6 @@ export default function RoPARecordsPage() {
                       </td>
                       <td className="p-4 text-slate-500 font-medium">{item.id || '-'}</td>
                       
-                      {/* 🌟 แก้ไข: ตัวแปรสำหรับการแสดงผลตาราง */}
                       <td className="p-4 font-bold text-[#2D3663]">{item.activity_name || item.activityName || '-'}</td>
                       <td className="p-4 text-slate-600">{item.data_subject || item.dataSubject || '-'}</td>
                       <td className="p-4 text-slate-600">{item.data_category || item.category || '-'}</td>
@@ -259,7 +258,6 @@ export default function RoPARecordsPage() {
                         </div>
                       </td>
                       <td className="p-4 text-slate-500">
-                        {/* ดึงวันที่จากตัวใดตัวหนึ่ง ถ้าไม่มีก็แสดง - */}
                         {item.create_date || item.dateAdded ? new Date(item.create_date || item.dateAdded).toLocaleDateString('th-TH') : '-'}
                       </td>
                     </tr>

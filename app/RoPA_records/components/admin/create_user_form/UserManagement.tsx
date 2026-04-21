@@ -11,9 +11,16 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [formStep, setFormStep] = useState(1);
   const [tempData, setTempData] = useState<any>({});
-  
+
+  // Filters State
   const [roleFilter, setRoleFilter] = useState<string>("All");
   const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [dateFilter, setDateFilter] = useState<string>("All");
+
+  // Dropdown Toggle State
+  const [isRoleOpen, setIsRoleOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isDateOpen, setIsDateOpen] = useState(false);
 
   const API_URL = "http://localhost:3340/users";
 
@@ -33,15 +40,16 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
 
   const handleDeleteSelected = async () => {
     if (!window.confirm(`คุณต้องการลบผู้ใช้งาน ${selectedIds.length} รายการที่เลือกใช่หรือไม่?`)) return;
-    
+
     try {
       const token = localStorage.getItem('access_token');
-      console.log(token)
-      const deletePromises = selectedIds.map(id => 
-        fetch(`${API_URL}/${id}`, { method: 'DELETE' ,headers: {
+      const deletePromises = selectedIds.map(id =>
+        fetch(`${API_URL}/${id}`, {
+          method: 'DELETE', headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json' 
-          }}) 
+            'Content-Type': 'application/json'
+          }
+        })
       );
       const results = await Promise.all(deletePromises);
       if (results.every(res => res.ok)) {
@@ -67,7 +75,7 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
         email: userToEdit.email || '',
         tel: userToEdit.tel || '',
         departments: userToEdit.departments || 'IT Support',
-        status: userToEdit.status || 'Active', // เก็บสถานะเดิมไว้ใน tempData
+        status: userToEdit.status || 'Active',
         password_hash: ''
       };
       setTempData(initialInfo);
@@ -75,7 +83,6 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
       setFormStep(1);
     }
   };
-
 
   const handleUpdateSubmit = async (finalData: any) => {
     const combined = { ...tempData, ...finalData };
@@ -86,20 +93,21 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
       tel: combined.tel,
       departments: combined.departments,
       role: combined.role,
-      status: combined.status 
+      status: combined.status
     };
-    
+
     if (combined.password_hash && combined.password_hash.trim() !== "") {
       payload.password_hash = combined.password_hash;
     }
-    
+
     try {
       const token = localStorage.getItem('access_token');
       const res = await fetch(`${API_URL}/${editingUser.id}`, {
         method: 'PUT',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`},
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload)
       });
       if (res.ok) {
@@ -125,16 +133,17 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
       tel: combined.tel,
       departments: combined.departments,
       role: combined.role,
-      status: combined.status, 
+      status: combined.status,
       password_hash: combined.password_hash
     };
     try {
       const token = localStorage.getItem('access_token');
       const res = await fetch("http://localhost:3340/user", {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`},
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload)
       });
       if (res.ok) {
@@ -159,11 +168,11 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
   };
 
   const filteredUsers = users.filter(u => {
-    const matchesSearch = 
+    const matchesSearch =
       (u.fullname?.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (u.email?.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (u.username?.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+
     const matchesRole = roleFilter === "All" || u.role === roleFilter;
     const userStatus = u.status || "Active";
     const matchesStatus = statusFilter === "All" || userStatus === statusFilter;
@@ -184,12 +193,12 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
           {formStep === 1 ? (
             <UserStep1 initialData={isEditing ? tempData : null} onNext={(data: any) => { setTempData(data); setFormStep(2); }} />
           ) : (
-            <UserStep2 
-              initialRole={isEditing ? editingUser?.role : 'Viewer'} 
-              initialStatus={isEditing ? (editingUser?.status || 'Active') : 'Active'} // ✨ ส่งค่า Status ไปยัง Step 2
-              isEditMode={isEditing} 
-              onBack={() => setFormStep(1)} 
-              onSubmit={isEditing ? handleUpdateSubmit : handleFinalSubmit} 
+            <UserStep2
+              initialRole={isEditing ? editingUser?.role : 'Viewer'}
+              initialStatus={isEditing ? (editingUser?.status || 'Active') : 'Active'}
+              isEditMode={isEditing}
+              onBack={() => setFormStep(1)}
+              onSubmit={isEditing ? handleUpdateSubmit : handleFinalSubmit}
             />
           )}
         </div>
@@ -199,64 +208,160 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
 
   return (
     <div className="flex flex-col h-full animate-in fade-in duration-500">
-      
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+
+      {/* ----------------- แถบด้านบน ----------------- */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6 relative z-20">
+
+        {/* ฝั่งซ้าย: กล่องค้นหา และ ตัวกรอง */}
         <div className="flex flex-wrap items-center gap-3 flex-1">
+
+          {/* ค้นหา */}
           <div className="relative w-full max-w-[280px]">
-            <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">🔍</span>
+            <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </span>
             <input
               type="text"
               placeholder="Search users..."
-              className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-full text-sm outline-none shadow-sm focus:ring-2 focus:ring-[#8B93C5]/20 text-slate-800"
+              className="w-full pl-11 pr-4 py-2 bg-white border border-slate-200 rounded-full text-sm outline-none shadow-sm focus:ring-2 focus:ring-[#8B93C5]/20 text-slate-800"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <button 
-            onClick={() => {
-              const statuses = ["All", "Active", "Inactive"];
-              const next = statuses[(statuses.indexOf(statusFilter) + 1) % statuses.length];
-              setStatusFilter(next);
-            }}
-            className={`flex items-center gap-2 px-4 py-2 border rounded-full text-xs font-bold transition-all ${statusFilter !== "All" ? 'bg-green-50 border-green-200 text-green-600' : 'bg-white border-slate-200 text-slate-500'}`}
-          >
-             🔖 สถานะ: {statusFilter} ▾
-          </button>
+          {/* ตัวกรอง: สถานะ (Custom Dropdown) */}
+          <div className="relative">
+            <button
+              onClick={() => { setIsStatusOpen(!isStatusOpen); setIsRoleOpen(false); setIsDateOpen(false); }}
+              className={`flex items-center gap-2 pl-4 pr-3 py-2 border rounded-full text-xs font-bold transition-all outline-none shadow-sm ${statusFilter !== "All"
+                ? 'bg-green-50 border-green-200 text-green-600'
+                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                }`}
+            >
+              <img
+                src="https://www.svgrepo.com/show/356007/badge.svg"
+                width="14"
+                height="14"
+                alt="badge icon"
+                className="w-3.5 h-3.5"
+              />
+              สถานะ: {statusFilter}
+              <span className="text-[10px] ml-1">{isStatusOpen ? '▲' : '▼'}</span>
+            </button>
 
-          <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-500 hover:bg-slate-50">
-             📅 วันที่ ▾
-          </button>
-          
-          <button 
-            onClick={() => {
-              const roles = ["All", "Admin", "Data Controller", "Viewer"];
-              const next = roles[(roles.indexOf(roleFilter) + 1) % roles.length];
-              setRoleFilter(next);
-            }}
-            className={`flex items-center gap-2 px-4 py-2 border rounded-full text-xs font-bold transition-all ${roleFilter !== "All" ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500'}`}
-          >
-             👤 บทบาท: {roleFilter} ▾
-          </button>
+            {isStatusOpen && (
+              <div className="absolute top-full left-0 mt-2 w-36 bg-white border border-slate-200 rounded-xl shadow-lg z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                {["All", "Active", "Inactive"].map((status) => (
+                  <div
+                    key={status}
+                    onClick={() => { setStatusFilter(status); setIsStatusOpen(false); }}
+                    className={`px-4 py-2 text-xs font-bold cursor-pointer transition-colors ${statusFilter === status ? 'bg-green-50 text-green-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      }`}
+                  >
+                    {status === "All" ? "ทั้งหมด (All)" : status}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* ตัวกรอง: วันที่ (Custom Dropdown) */}
+          <div className="relative">
+            <button
+              onClick={() => { setIsDateOpen(!isDateOpen); setIsStatusOpen(false); setIsRoleOpen(false); }}
+              className={`flex items-center gap-2 pl-4 pr-3 py-2 border rounded-full text-xs font-bold transition-all outline-none shadow-sm ${dateFilter !== "All"
+                ? 'bg-purple-50 border-purple-200 text-purple-600'
+                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                }`}
+            >
+              <img
+                src="https://www.svgrepo.com/show/381187/date-calendar-schedule-event-appointment.svg"
+                width="14"
+                height="14"
+                alt="badge icon"
+                className="w-3.5 h-3.5"
+              />
+              Date: {dateFilter}
+              <span className="text-[10px] ml-1">{isDateOpen ? '▲' : '▼'}</span>
+            </button>
+
+            {isDateOpen && (
+              <div className="absolute top-full left-0 mt-2 w-40 bg-white border border-slate-200 rounded-xl shadow-lg z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                {["All", "Today", "Last 7 Days", "Last 30 Days"].map((date) => (
+                  <div
+                    key={date}
+                    onClick={() => { setDateFilter(date); setIsDateOpen(false); }}
+                    className={`px-4 py-2 text-xs font-bold cursor-pointer transition-colors ${dateFilter === date ? 'bg-purple-50 text-purple-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      }`}
+                  >
+                    {date === "All" ? "ทั้งหมด (All)" : date}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ตัวกรอง: Role (Custom Dropdown) */}
+          <div className="relative">
+            <button
+              onClick={() => { setIsRoleOpen(!isRoleOpen); setIsStatusOpen(false); setIsDateOpen(false); }}
+              className={`flex items-center gap-2 pl-4 pr-3 py-2 border rounded-full text-xs font-bold transition-all outline-none shadow-sm ${roleFilter !== "All"
+                ? 'bg-blue-50 border-blue-200 text-blue-600'
+                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                }`}
+            >
+              <img
+                src="https://www.svgrepo.com/show/532363/user-alt-1.svg"
+                width="14"
+                height="14"
+                alt="badge icon"
+                className="w-3.5 h-3.5"
+              />
+              Role: {roleFilter === "DPO(Data Protection Officer)" ? "DPO" : roleFilter}
+              <span className="text-[10px] ml-1">{isRoleOpen ? '▲' : '▼'}</span>
+            </button>
+
+            {isRoleOpen && (
+              <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                {["All", "Data Controller", "Data Processor", "DPO(Data Protection Officer)", "Admin", "Auditor", "Excutive"].map((role) => (
+                  <div
+                    key={role}
+                    onClick={() => { setRoleFilter(role); setIsRoleOpen(false); }}
+                    className={`px-4 py-2 text-xs font-bold cursor-pointer transition-colors ${roleFilter === role ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                      }`}
+                  >
+                    {role === "All" ? "ทั้งหมด (All)" : role}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+
         </div>
 
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-5 py-2 bg-white border border-slate-200 rounded-full text-sm font-bold text-slate-600 shadow-sm hover:bg-slate-50">📤 Export</button>
-          <button className="flex items-center gap-2 px-5 py-2 bg-white border border-slate-200 rounded-full text-sm font-bold text-slate-600 shadow-sm hover:bg-slate-50">📥 Import</button>
+        {/* ฝั่งขวา: ปุ่ม Action */}
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 px-5 py-2 bg-white border border-slate-200 rounded-full text-sm font-bold text-slate-600 shadow-sm hover:bg-slate-50 transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Import
+          </button>
+
           <button
             onClick={() => { setIsAddingNew(true); setIsEditing(false); setTempData({}); setFormStep(1); }}
-            className="flex items-center gap-2 px-8 py-2 bg-[#8B93C5] text-white rounded-full font-black shadow-lg hover:scale-105 transition-transform"
+            className="flex items-center justify-center px-6 py-2 bg-[#8B93C5] text-white rounded-full text-sm font-bold shadow-md hover:bg-[#7a82b3] transition-colors"
           >
             + New
           </button>
         </div>
       </div>
+      {/* ------------------------------------------------------------------ */}
 
-      <div className="flex-1 bg-white rounded-xl border border-slate-100 overflow-hidden flex flex-col shadow-sm">
-        <table className="w-full text-left text-sm border-collapse">
+      {/* ส่วนตาราง Z-index ต่ำกว่า Dropdown */}
+      <div className="relative z-10 flex-1 bg-white rounded-xl border border-slate-100 overflow-hidden flex flex-col shadow-sm">
+        <table className="w-full text-left text-sm border-collapse table-fixed">
           <thead className="bg-[#E9F2F9] border-b border-slate-100">
             <tr>
-              <th className="p-4 w-12 text-center">
+              <th className="px-6 py-4 w-[5%] text-center">
                 <input
                   type="checkbox"
                   checked={selectedIds.length === filteredUsers.length && filteredUsers.length > 0}
@@ -265,13 +370,13 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
                 />
               </th>
               {selectedIds.length > 0 ? (
-                <th colSpan={8} className="p-4 bg-white/50">
+                <th colSpan={7} className="px-6 py-4 bg-white/50">
                   <div className="flex items-center justify-between">
                     <span className="text-[#2D3663] font-black">เลือกแล้ว {selectedIds.length} รายการ</span>
                     <div className="flex gap-2">
                       {selectedIds.length === 1 && (
                         <button onClick={handleEditClick} className="px-6 py-1.5 bg-amber-500 text-white rounded-full font-bold shadow-md hover:bg-amber-600 transition-colors flex items-center gap-2">
-                          <img src="https://www.svgrepo.com/show/442480/edit.svg" alt="edit" className="h-4 w-4 invert"/> แก้ไข
+                          <img src="https://www.svgrepo.com/show/442480/edit.svg" alt="edit" className="h-4 w-4 invert" /> แก้ไข
                         </button>
                       )}
                       <button onClick={handleDeleteSelected} className="px-6 py-1.5 bg-red-500 text-white rounded-full font-bold shadow-md hover:bg-red-600 transition-colors flex items-center gap-2">
@@ -282,14 +387,13 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
                 </th>
               ) : (
                 <>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px]">ID</th>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px]">ชื่อ-นามสกุล</th>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px]">อีเมล</th>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px]">ชื่อบัญชีผู้ใช้งาน</th>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px] text-center">สถานะ</th>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px] text-center">บทบาท</th>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px]">แผนก</th>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px] text-right pr-6">ใช้งานล่าสุด</th>
+                  <th className="px-6 py-4 font-bold text-[#2D3663] text-[13px] w-[5%] whitespace-nowrap">ID</th>
+                  <th className="px-6 py-4 font-bold text-[#2D3663] text-[13px] w-[20%] whitespace-nowrap">ชื่อ-นามสกุล</th>
+                  <th className="px-6 py-4 font-bold text-[#2D3663] text-[13px] w-[20%] whitespace-nowrap">อีเมล</th>
+                  <th className="px-6 py-4 font-bold text-[#2D3663] text-[13px] w-[15%] whitespace-nowrap">ชื่อบัญชีผู้ใช้งาน</th>
+                  <th className="px-6 py-4 font-bold text-[#2D3663] text-[13px] text-center w-[12%] whitespace-nowrap">สถานะ</th>
+                  <th className="px-6 py-4 font-bold text-[#2D3663] text-[13px] w-[13%] whitespace-nowrap">แผนก</th>
+                  <th className="px-6 py-4 font-bold text-[#2D3663] text-[13px] text-right w-[10%] whitespace-nowrap">ใช้งานล่าสุด</th>
                 </>
               )}
             </tr>
@@ -297,7 +401,7 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
           <tbody className="divide-y divide-slate-50">
             {filteredUsers.length > 0 ? filteredUsers.map((user) => (
               <tr key={user.id} className={`hover:bg-slate-50/50 transition-colors ${selectedIds.includes(user.id) ? 'bg-[#F0F7FF]' : ''}`}>
-                <td className="p-4 text-center">
+                <td className="px-6 py-4 text-center">
                   <input
                     type="checkbox"
                     checked={selectedIds.includes(user.id)}
@@ -305,28 +409,39 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
                     className="rounded-md w-4 h-4 cursor-pointer"
                   />
                 </td>
-                <td className="p-4 text-slate-500 font-medium">{user.id}</td>
-                <td className="p-4 font-bold text-slate-800">{user.fullname || '-'}</td>
-                <td className="p-4 text-slate-500 font-medium">{user.email || '-'}</td>
-                <td className="p-4 text-slate-500 font-medium">{user.username || '-'}</td>
-                <td className="p-4 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${user.status === 'Inactive' ? 'bg-slate-300' : 'bg-green-500'}`}></div>
-                    <span className={`font-bold text-[12px] ${user.status === 'Inactive' ? 'text-slate-400' : 'text-green-600'}`}>
-                      {user.status || 'Active'}
+                <td className="px-6 py-4 text-slate-500 font-medium">{user.id}</td>
+
+                <td className="px-6 py-4 font-bold text-slate-800 truncate" title={user.fullname}>
+                  {user.fullname || '-'}
+                </td>
+                <td className="px-6 py-4 text-slate-500 font-medium truncate" title={user.email}>
+                  {user.email || '-'}
+                </td>
+                <td className="px-6 py-4 text-slate-500 font-medium truncate" title={user.username}>
+                  {user.username || '-'}
+                </td>
+
+                <td className="px-6 py-4 text-center">
+                  <div className="flex justify-center">
+                    <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${user.status === 'Active' || !user.status
+                      ? 'bg-[#239D62] text-white'
+                      : user.status?.toLowerCase() === 'inactive'
+                        ? 'bg-[#FFB200] text-white '
+                        : 'bg-slate-50 text-slate-500 border-slate-200'
+                      }`}>
+                      {user.status || 'ACTIVE'}
                     </span>
                   </div>
                 </td>
-                <td className="p-4 text-center">
-                  <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase ${user.role?.toLowerCase() === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
-                    {user.role || 'VIEWER'}
-                  </span>
+
+                <td className="px-6 py-4 text-slate-500 font-medium truncate" title={user.departments}>
+                  {user.departments || '-'}
                 </td>
-                <td className="p-4 text-slate-500 font-medium">{user.departments || '-'}</td>
-                <td className="p-4 text-right pr-6 text-slate-400 italic font-bold">11/04/2026</td>
+
+                <td className="px-6 py-4 text-right text-slate-400 italic font-bold whitespace-nowrap">11/04/2026</td>
               </tr>
             )) : (
-              <tr><td colSpan={9} className="p-10 text-center text-slate-400 font-bold">ไม่พบข้อมูลผู้ใช้งานที่ตรงตามเงื่อนไข</td></tr>
+              <tr><td colSpan={8} className="p-10 text-center text-slate-400 font-bold">ไม่พบข้อมูลผู้ใช้งานที่ตรงตามเงื่อนไข</td></tr>
             )}
           </tbody>
         </table>

@@ -45,7 +45,8 @@ const Sidebar = ({ activeMenu, setActiveMenu }: { activeMenu: string, setActiveM
         </div>
       </div>
 
-      <div className="flex-1 space-y-1 overflow-y-auto custom-scrollbar">
+      {/* แก้ไขบรรทัดนี้: ลบ custom-scrollbar ออก และเพิ่ม overflow-x-hidden scrollbar-hide */}
+      <div className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-hide">
         <div className="w-full flex items-center px-6 py-4 mb-2 text-xl font-black text-slate-800 bg-[#A6D8FF] rounded-l-[2rem]">
            Departmental Records
         </div>
