@@ -204,7 +204,6 @@ export default function PendingReview({ onBack }: PendingReviewProps) {
         body: JSON.stringify({
           ropa_id: selectedRecord.id,
           detail: feedbackText,
-          create_by: userId,
         }),
       });
       if (res.ok) {
