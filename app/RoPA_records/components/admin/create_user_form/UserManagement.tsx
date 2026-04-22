@@ -37,6 +37,38 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
       })
       .catch(err => console.error("Fetch Error:", err));
   };
+  const formatLastActive = (dateString: string) => {
+    if (!dateString) return "-";
+
+    try {
+      const now = new Date();
+      const past = new Date(dateString);
+      const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
+
+      if (diffInSeconds < 5) return "just now";
+
+      const intervals = [
+        { label: 'year', seconds: 31536000 },
+        { label: 'month', seconds: 2592000 },
+        { label: 'day', seconds: 86400 },
+        { label: 'hour', seconds: 3600 },
+        { label: 'min', seconds: 60 },
+        { label: 'sec', seconds: 1 }
+      ];
+
+      for (let i = 0; i < intervals.length; i++) {
+        const interval = intervals[i];
+        const count = Math.floor(diffInSeconds / interval.seconds);
+
+        if (count >= 1) {
+          return `${count} ${interval.label}${count > 1 ? 's' : ''} ago`;
+        }
+      }
+      return "-";
+    } catch (e) {
+      return "-";
+    }
+  };
 
   const handleDeleteSelected = async () => {
     if (!window.confirm(`คุณต้องการลบผู้ใช้งาน ${selectedIds.length} รายการที่เลือกใช่หรือไม่?`)) return;
@@ -138,7 +170,7 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
     };
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch("http://localhost:3340/user", {
+      const res = await fetch("http://localhost:3340/users", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -356,7 +388,6 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
       </div>
       {/* ------------------------------------------------------------------ */}
 
-      {/* ส่วนตาราง Z-index ต่ำกว่า Dropdown */}
       <div className="relative z-10 flex-1 bg-white rounded-xl border border-slate-100 overflow-hidden flex flex-col shadow-sm">
         <table className="w-full text-left text-sm border-collapse table-fixed">
           <thead className="bg-[#E9F2F9] border-b border-slate-100">
@@ -438,7 +469,9 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
                   {user.departments || '-'}
                 </td>
 
-                <td className="px-6 py-4 text-right text-slate-400 italic font-bold whitespace-nowrap">11/04/2026</td>
+                <td className="px-6 py-4 text-right text-slate-400 italic font-bold whitespace-nowrap">
+                  {formatLastActive(user.last_active)}
+                </td>
               </tr>
             )) : (
               <tr><td colSpan={8} className="p-10 text-center text-slate-400 font-bold">ไม่พบข้อมูลผู้ใช้งานที่ตรงตามเงื่อนไข</td></tr>

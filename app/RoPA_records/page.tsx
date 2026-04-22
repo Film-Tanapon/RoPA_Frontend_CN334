@@ -1,32 +1,79 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
-import MainForm from './components/processing_activity/step1';
-import UserManagement from './components/admin/create_user_form/UserManagement'; 
-import Feedback from './components/Feedback/Feedback'; 
-
-// 🌟 1. นำเข้าไฟล์ Dashboard ตามโครงสร้างโฟลเดอร์ของคุณ
+import RopaCombinedForm from './components/processing_activity/step1';
+import UserManagement from './components/admin/create_user_form/UserManagement';
+import Feedback from './components/Feedback/Feedback';
 import Dashboard from './components/Dashboard/Dashboard';
+import TotalActivitiesTable from './components/Dashboard/TotalActivitiesTable';
+import PendingReview from './components/Dashboard/PendingReview';
+import DeleteRequest from './components/Dashboard/DeleteRequest';
+import ExtendRetention from './components/Dashboard/ExtendRetention';
+
+import { jwtDecode } from "jwt-decode";
 
 export default function RoPARecordsPage() {
-  const [activeMenu, setActiveMenu] = useState('RoPA Records');
+  const [activeMenu, setActiveMenu] = useState('');
+  const [userRole, setUserRole] = useState<string>('');
   const [isCreating, setIsCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [records, setRecords] = useState<any[]>([]); 
+  const [records, setRecords] = useState<any[]>([]);
 
   const API_URL = "http://localhost:3340/ropa-records";
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "-";
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat('th-TH', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(date);
+    } catch (e) {
+      return "-";
+    }
+  };
+  // ทำให้คำนวณเวลาแบบ Relative Time (1 min ago, บลาๆๆ)
+  const formatTimeAgo = (dateString: string) => {
+    if (!dateString) return "-";
+    try {
+      const now = new Date();
+      const past = new Date(dateString);
+      const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
+
+      if (diffInSeconds < 5) return "just now";
+
+      const intervals = [
+        { label: 'year', seconds: 31536000 },
+        { label: 'month', seconds: 2592000 },
+        { label: 'day', seconds: 86400 },
+        { label: 'hour', seconds: 3600 },
+        { label: 'min', seconds: 60 },
+        { label: 'sec', seconds: 1 }
+      ];
+
+      for (let i = 0; i < intervals.length; i++) {
+        const interval = intervals[i];
+        const count = Math.floor(diffInSeconds / interval.seconds);
+        if (count >= 1) {
+          return `${count} ${interval.label}${count > 1 ? 's' : ''} ago`;
+        }
+      }
+      return "-";
+    } catch (e) {
+      return "-";
+    }
+  };
+
   const loadRecords = async () => {
     try {
-      const res = await fetch(API_URL, { cache: 'no-store' }); 
+      const res = await fetch(API_URL, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setRecords(Array.isArray(data) ? data : data.data || data.records || []);
-      } else {
-        console.error("ไม่สามารถดึงข้อมูล RoPA ได้");
       }
     } catch (error) {
       console.error("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้:", error);
@@ -34,120 +81,89 @@ export default function RoPARecordsPage() {
   };
 
   useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      try {
+        const decoded: any = jwtDecode(token);
+        const role = decoded.role;
+        setUserRole(role);
+
+        if (role === 'Admin') {
+          setActiveMenu('User Management');
+        } else if (['Executive', 'Auditor', 'DPO(Data Protection Officer)'].includes(role)) {
+          setActiveMenu('Dashboard');
+        } else if (role === 'Data Controller' || role === 'Data Processor') {
+          setActiveMenu('RoPA Records');
+        } else {
+          setActiveMenu('Feedback');
+        }
+      } catch (error) {
+        console.error("Invalid token:", error);
+      }
+    }
     loadRecords();
   }, []);
 
-  const filteredData = records.filter((item) =>
-    (item.activity_name || item.activityName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.id?.toString() || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.data_category || item.category || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const handleDeleteSelected = async () => {
-    if (!window.confirm(`คุณต้องการลบข้อมูล ${selectedIds.length} รายการที่เลือกใช่หรือไม่? การกระทำนี้ไม่สามารถเรียกคืนได้`)) return;
-    
+    if (!window.confirm(`คุณต้องการลบข้อมูล ${selectedIds.length} รายการที่เลือกใช่หรือไม่?`)) return;
     try {
       const token = localStorage.getItem("access_token");
-      let successCount = 0;
-      let failCount = 0;
-
       for (const id of selectedIds) {
-        const res = await fetch(`http://localhost:3340/ropa-records/${id}`, {
+        await fetch(`${API_URL}/${id}`, {
           method: "DELETE",
-          headers: { 
-            "Authorization": `Bearer ${token}` 
-          }
+          headers: { "Authorization": `Bearer ${token}` }
         });
-
-        if (res.ok) {
-          successCount++;
-        } else {
-          failCount++;
-        }
       }
-      
-      if (failCount > 0) {
-        alert(`ลบไม่สำเร็จ ${failCount} รายการ \n(ข้อมูลอาจถูกใช้งานอยู่ หรือเซิร์ฟเวอร์มีปัญหา)`);
-      } else {
-        alert("ลบข้อมูลสำเร็จ");
-      }
-
-      setSelectedIds([]); 
-      loadRecords(); 
+      alert("ลบข้อมูลสำเร็จ");
+      setSelectedIds([]);
+      loadRecords();
     } catch (error) {
-      console.error("Error deleting data:", error);
-      alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
+      alert("เกิดข้อผิดพลาดในการลบ");
     }
   };
 
   const renderContent = () => {
-    if (activeMenu === 'User Management') {
-      return <UserManagement searchTerm={searchTerm} setSearchTerm={setSearchTerm} />;
-    }
+    if (!activeMenu) return null;
 
-    // 🌟 2. แก้ไขให้แสดงผล Component <Dashboard /> แทนข้อความเดิม
-    if (activeMenu === 'Dashboard') {
-        return <Dashboard />;
-    }
-
-    if (activeMenu === 'Feedback') {
-      return <Feedback />;
-    }
-
-    // (อันนี้ปล่อยไว้เหมือนเดิม สำหรับดักเมนูอื่นๆ ที่ยังไม่เคยสร้างหน้า)
-    if (activeMenu !== 'RoPA Records') {
-      return (
-        <div className="flex flex-col h-full items-center justify-center animate-in fade-in duration-500">
-          <h1 className="text-4xl font-black text-slate-900 mb-4">{activeMenu}</h1>
-          <p className="text-slate-400 font-bold italic">This section is coming soon...</p>
-        </div>
-      );
-    }
+    if (activeMenu === 'User Management') return <UserManagement searchTerm={searchTerm} setSearchTerm={setSearchTerm} />;
+    if (activeMenu === 'Dashboard') return <Dashboard />;
+    if (activeMenu === 'Feedback') return <Feedback />;
+    if (activeMenu === 'Total Activities') return <TotalActivitiesTable onEdit={(item) => { setEditingItem(item); setIsCreating(true); }} />;
+    if (activeMenu === 'Pending Review') return <PendingReview />;
+    if (activeMenu === 'Delete Request') return <DeleteRequest userRole={userRole} />;
+    if (activeMenu === 'Extend Retention') return <ExtendRetention />;
 
     if (isCreating || editingItem) {
       return (
-        <MainForm 
+        <RopaCombinedForm
           initialData={editingItem}
-          onCancel={() => { 
-            setIsCreating(false); 
-            setEditingItem(null); 
-          }} 
-          onSuccess={() => { 
-            setIsCreating(false); 
-            setEditingItem(null);
-            setSelectedIds([]); 
-            loadRecords(); 
-          }} 
+          onCancel={() => { setIsCreating(false); setEditingItem(null); }}
+          onSuccess={() => { setIsCreating(false); setEditingItem(null); loadRecords(); }}
         />
       );
     }
 
+    const filteredData = records.filter((item) =>
+      (item.activity_name || item.activityName || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
       <div className="flex flex-col h-full animate-in fade-in duration-500">
-        
-        {/* --- Top Toolbar --- */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div className="flex flex-wrap items-center gap-3 flex-1">
             <div className="relative w-full max-w-[320px]">
               <span className="absolute inset-y-0 left-4 flex items-center text-slate-400">🔍</span>
-              <input 
-                type="text" 
-                placeholder="ค้นหากิจกรรม, ID หรือหมวดหมู่..." 
+              <input
+                type="text"
+                placeholder="ค้นหากิจกรรม..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-full text-sm outline-none shadow-sm focus:ring-2 focus:ring-[#8B93C5]/20 text-slate-800"
+                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-300 rounded-full text-sm outline-none focus:ring-2 focus:ring-[#8B93C5]/20 text-slate-800"
               />
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-full text-xs font-bold text-slate-500 hover:bg-slate-50">
-               <img src="https://www.svgrepo.com/show/532130/filter.svg" alt="filter" className="w-4 h-4 opacity-50" /> filter ▾
-            </button>
           </div>
-
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-5 py-2 bg-white border border-slate-300 rounded-full text-sm font-bold text-slate-500 shadow-sm hover:bg-slate-50">
-              <img src="https://www.svgrepo.com/show/521713/download.svg" alt="import" className="w-4 h-4 opacity-50" /> import
-            </button>
-            <button 
+            <button
               onClick={() => { setIsCreating(true); setEditingItem(null); }}
               className="flex items-center gap-2 px-6 py-2 bg-[#8B93C5] text-white rounded-full font-bold shadow-md hover:bg-[#7a82b5] transition-all"
             >
@@ -156,138 +172,129 @@ export default function RoPARecordsPage() {
           </div>
         </div>
 
-        {/* --- Main Table Area --- */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Tab Header */}
-          <div className="flex">
-            <div className="px-6 py-2.5 bg-[#E9F2F9] border border-slate-300 border-b-0 text-[#2D3663] font-bold text-sm">
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          <div className="relative flex items-end">
+            <div className="px-6 py-2.5 bg-[#E9F2F9] border border-slate-300 border-b-0 text-[#2D3663] font-bold text-sm rounded-t-lg">
               บันทึกรายการกิจกรรมการประมวลผล
             </div>
+
+            {selectedIds.length > 0 && (
+              <div className="absolute right-0 bottom-2 flex gap-2 animate-in fade-in slide-in-from-right-4">
+                {selectedIds.length === 1 && (
+                  <button
+                    onClick={() => {
+                      const item = records.find(r => r.id === selectedIds[0]);
+                      setEditingItem(item);
+                      setIsCreating(true);
+                    }}
+                    className="flex items-center gap-2 px-5 py-1.5 bg-[#FFB200] text-white rounded-full text-[11px] font-bold uppercase tracking-wider shadow-sm hover:bg-[#e6a000] transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    แก้ไข
+                  </button>
+                )}
+                <button
+                  onClick={handleDeleteSelected}
+                  className="flex items-center gap-2 px-5 py-1.5 bg-[#EF4444] text-white rounded-full text-[11px] font-bold uppercase tracking-wider shadow-sm hover:bg-[#dc2626] transition-colors"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                  ลบ {selectedIds.length > 1 ? `(${selectedIds.length})` : ''}
+                </button>
+              </div>
+            )}
             <div className="flex-1 border-b border-slate-300"></div>
           </div>
-          
-          {selectedIds.length > 0 && (
-            <div className="bg-[#F8FAFC] border-x border-b border-slate-300 px-6 py-3 flex items-center justify-between transition-all animate-in fade-in">
-              <div className="flex items-center gap-3">
-                <span className="text-[#1E2A5E] font-bold text-[14px]">
-                  เลือกแล้ว {selectedIds.length} รายการ
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => {
-                    if (selectedIds.length > 1) {
-                      alert('กรุณาเลือกแก้ไขทีละ 1 รายการ');
-                    } else {
-                      const itemToEdit = records.find(r => r.id === selectedIds[0]);
-                      setEditingItem(itemToEdit);
-                    }
-                  }}
-                  className="flex items-center gap-1.5 bg-[#F59E0B] text-white font-bold text-[13px] hover:bg-[#D97706] px-5 py-2 rounded-full transition-colors shadow-sm"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                  แก้ไข
-                </button>
 
-                <button 
-                  onClick={handleDeleteSelected}
-                  className="flex items-center gap-1.5 bg-[#EF4444] text-white font-bold text-[13px] hover:bg-[#DC2626] px-5 py-2 rounded-full transition-colors shadow-sm"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                  ลบที่เลือก
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Table Container */}
-          <div className="flex-1 bg-[#F4F9FD] border-x border-b border-slate-300 overflow-auto custom-scrollbar">
+          <div className="flex-1 bg-white border-x border-b border-slate-300 overflow-auto rounded-b-xl shadow-sm">
             <table className="w-full text-left text-sm border-collapse">
-              <thead className="bg-[#E9F2F9] sticky top-0 z-10 shadow-sm">
+              <thead className="bg-[#E9F2F9] sticky top-0 z-10 border-b border-slate-200">
                 <tr>
-                  <th className="p-4 w-12 text-center border-b border-slate-200">
-                    <input 
-                      type="checkbox" 
+                  <th className="p-4 w-12 text-center">
+                    <input
+                      type="checkbox"
                       className="rounded-sm w-4 h-4 cursor-pointer"
                       checked={selectedIds.length === filteredData.length && filteredData.length > 0}
                       onChange={(e) => setSelectedIds(e.target.checked ? filteredData.map(d => d.id) : [])}
                     />
                   </th>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px] border-b border-slate-200">ID</th>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px] border-b border-slate-200">ชื่อกิจกรรม</th>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px] border-b border-slate-200">เจ้าของข้อมูล</th>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px] border-b border-slate-200">หมวดหมู่กิจกรรม</th>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px] text-center border-b border-slate-200">ระดับความเสี่ยง</th>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px] text-center border-b border-slate-200">สถานะ</th>
-                  <th className="p-4 font-bold text-[#2D3663] text-[13px] border-b border-slate-200">วันที่เพิ่ม</th>
+                  <th className="p-4 font-bold text-[#2D3663]">ID</th>
+                  <th className="p-4 font-bold text-[#2D3663]">ชื่อกิจกรรม</th>
+                  <th className="p-4 font-bold text-[#2D3663]">เจ้าของข้อมูล</th>
+                  <th className="p-4 font-bold text-[#2D3663]">หมวดหมู่</th>
+                  <th className="p-4 font-bold text-[#2D3663] text-center">ระดับความเสี่ยง</th>
+                  <th className="p-4 font-bold text-[#2D3663] text-center">สถานะ</th>
+                  <th className="p-4 font-bold text-[#2D3663] text-right">วันที่สร้าง</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody>
                 {filteredData.length > 0 ? (
                   filteredData.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                    <tr
+                      key={item.id}
+                      className={`hover:bg-slate-50 border-b border-slate-100 transition-colors ${selectedIds.includes(item.id) ? 'bg-blue-50/40' : ''}`}
+                    >
                       <td className="p-4 text-center">
-                        <input 
-                          type="checkbox" 
-                          className="rounded-sm w-4 h-4 cursor-pointer"
+                        <input
+                          type="checkbox"
                           checked={selectedIds.includes(item.id)}
                           onChange={() => setSelectedIds(prev => prev.includes(item.id) ? prev.filter(i => i !== item.id) : [...prev, item.id])}
                         />
                       </td>
-                      <td className="p-4 text-slate-500 font-medium">{item.id || '-'}</td>
-                      
+                      <td className="p-4 text-slate-500 font-medium">{item.id}</td>
                       <td className="p-4 font-bold text-[#2D3663]">{item.activity_name || item.activityName || '-'}</td>
-                      <td className="p-4 text-slate-600">{item.data_subject || item.dataSubject || '-'}</td>
-                      <td className="p-4 text-slate-600">{item.data_category || item.category || '-'}</td>
-                      
+                      <td className="p-4 text-slate-600">{item.data_subject || '-'}</td>
+                      <td className="p-4 text-slate-600">{item.data_category || '-'}</td>
                       <td className="p-4 text-center">
-                        <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${
-                          (item.risk_level || item.riskLevel) === 'สูง' ? 'bg-red-100 text-red-600' :
-                          (item.risk_level || item.riskLevel) === 'ปานกลาง' ? 'bg-amber-100 text-amber-600' :
-                          'bg-green-100 text-green-600'
-                        }`}>
-                          {item.risk_level || item.riskLevel || 'ไม่ระบุ'}
+                        <span className={`text-[11px] font-bold uppercase ${item.risk_level === 'ความเสี่ยงระดับสูง'
+                          ? 'text-red-500'
+                          : item.risk_level === 'ความเสี่ยงระดับกลาง'
+                            ? 'text-yellow-500'
+                            : 'text-green-500'
+                          }`}>
+                          {item.risk_level || 'ปานกลาง'}
                         </span>
                       </td>
-                      <td className="p-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <div className={`w-2 h-2 rounded-full ${item.status === 'Active' ? 'bg-green-500' : 'bg-slate-300'}`}></div>
-                          <span className={`text-[12px] font-bold ${item.status === 'Active' ? 'text-green-600' : 'text-slate-400'}`}>
-                            {item.status || 'Active'}
-                          </span>
-                        </div>
+                      <td className={`p-4 text-center font-bold uppercase text-[11px] ${item.status === 'Pending' ? 'text-amber-500' : 'text-green-600'
+                        }`}>
+                        {item.status || 'Active'}
                       </td>
-                      <td className="p-4 text-slate-500">
-                        {item.create_date || item.dateAdded ? new Date(item.create_date || item.dateAdded).toLocaleDateString('th-TH') : '-'}
+                      <td className="p-4 text-right text-slate-400 italic font-bold whitespace-nowrap">
+                        {formatDate(item.create_date)}
                       </td>
                     </tr>
                   ))
                 ) : (
-                  <tr>
-                    <td colSpan={8} className="p-16 text-center text-slate-400 italic font-bold bg-white">
-                      ไม่พบข้อมูล
-                    </td>
-                  </tr>
+                  <tr><td colSpan={8} className="p-20 text-center text-slate-400 italic">ไม่พบข้อมูล</td></tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
-
       </div>
     );
   };
 
   return (
     <div className="flex h-screen bg-white overflow-hidden font-sans">
-      <Sidebar activeMenu={activeMenu} setActiveMenu={(menu) => {
-        setActiveMenu(menu);
-        setIsCreating(false); 
-        setEditingItem(null); 
-        setSelectedIds([]); 
-      }} />
-
-      <div className="flex-1 p-0 bg-white">
+      <Sidebar
+        activeMenu={activeMenu}
+        setActiveMenu={(menu) => {
+          setActiveMenu(menu);
+          setIsCreating(false);
+          setEditingItem(null);
+          setSelectedIds([]);
+        }}
+        userRole={userRole}
+      />
+      <div className="flex-1 p-0 bg-white shadow-inner">
         <div className="w-full h-full p-10">
           <div className="bg-slate-50 w-full h-full rounded-[3rem] border border-slate-200 p-10 shadow-sm overflow-hidden flex flex-col">
             {renderContent()}
