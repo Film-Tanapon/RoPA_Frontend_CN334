@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import RopaCombinedForm from './components/processing_activity/step1';
 import UserManagement from './components/admin/create_user_form/UserManagement';
+import ExpirationAlert from './components/ExpirationAlert/ExpirationAlert';
 import Feedback from './components/Feedback/Feedback';
 import Dashboard from './components/Dashboard/Dashboard';
 import TotalActivitiesTable from './components/Dashboard/TotalActivitiesTable';
@@ -128,7 +129,8 @@ export default function RoPARecordsPage() {
     if (activeMenu === 'User Management') return <UserManagement searchTerm={searchTerm} setSearchTerm={setSearchTerm} />;
     if (activeMenu === 'Dashboard') return <Dashboard />;
     if (activeMenu === 'Feedback') return <Feedback />;
-    if (activeMenu === 'Total Activities') return <TotalActivitiesTable onEdit={(item) => { setEditingItem(item); setIsCreating(true); }} />;
+    if (activeMenu === 'Expiration Alert') return <ExpirationAlert />;
+    if (activeMenu === 'TotalActivities') return <TotalActivitiesTable onEdit={(item) => { setEditingItem(item); setIsCreating(true); }} />;
     if (activeMenu === 'Pending Review') return <PendingReview />;
     if (activeMenu === 'Delete Request') return <DeleteRequest userRole={userRole} />;
     if (activeMenu === 'Extend Retention') return <ExtendRetention />;
