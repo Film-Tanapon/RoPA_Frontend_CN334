@@ -91,7 +91,7 @@ export default function RoPARecordsPage() {
 
         if (role === 'Admin') {
           setActiveMenu('User Management');
-        } else if (['Executive', 'Auditor', 'DPO(Data Protection Officer)'].includes(role)) {
+        } else if (['Excutive', 'Auditor', 'DPO(Data Protection Officer)'].includes(role)) {
           setActiveMenu('Dashboard');
         } else if (role === 'Data Controller' || role === 'Data Processor') {
           setActiveMenu('RoPA Records');
