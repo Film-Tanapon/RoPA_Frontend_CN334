@@ -148,7 +148,20 @@ export default function RoPARecordsPage() {
     const filteredData = records.filter((item) =>
       (item.activity_name || item.activityName || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
-
+    const getStatusStyles = (status?: string) => {
+      switch (status) {
+        case 'Expired':
+          return 'bg-red-500 text-white';
+        case 'Reviewed':
+          return 'bg-green-600 text-white';
+        case 'Pending':
+          return 'bg-amber-400 text-white'; // สีเหลือง
+        case 'Action require':
+          return 'bg-slate-400 text-white'; // สีเทา
+        default:
+          return 'bg-green-600 text-white'; // สีเขียว (กรณี Active หรืออื่นๆ)
+      }
+    };
     return (
       <div className="flex flex-col h-full animate-in fade-in duration-500">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -264,9 +277,10 @@ export default function RoPARecordsPage() {
                           {item.risk_level || 'ปานกลาง'}
                         </span>
                       </td>
-                      <td className={`p-4 text-center font-bold uppercase text-[11px] ${item.status === 'Pending' ? 'text-amber-500' : 'text-green-600'
-                        }`}>
-                        {item.status || 'Active'}
+                      <td className="p-4 text-center">
+                        <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider shadow-sm ${getStatusStyles(item.status)}`}>
+                          {item.status || 'Active'}
+                        </span>
                       </td>
                       <td className="p-4 text-right text-slate-400 italic font-bold whitespace-nowrap">
                         {formatDate(item.create_date)}

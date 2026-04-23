@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import UserStep1 from './UserStep1';
 import UserStep2 from './UserStep2';
+import * as XLSX from 'xlsx'
 
 export default function UserManagement({ searchTerm, setSearchTerm }: any) {
   const [users, setUsers] = useState<any[]>([]);
@@ -191,6 +192,69 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
     }
   };
 
+
+  // 2. ฟังก์ชัน handleExportXLSX
+  const handleExportXLSX = () => {
+    // กรองข้อมูลเฉพาะคนที่ถูกเลือก (ถ้าไม่ได้เลือกใคร ให้หยุดทำงาน)
+    const exportUsers = selectedIds.length > 0
+      ? users.filter(u => selectedIds.includes(u.id))
+      : [];
+
+    if (exportUsers.length === 0) {
+      alert("กรุณาเลือกผู้ใช้งานที่ต้องการ Export อย่างน้อย 1 คน");
+      return;
+    }
+
+    // กำหนดโครงสร้างคอลัมน์
+    const columns = [
+      { header: 'User ID', key: 'id', width: 10 },
+      { header: 'Username', key: 'username', width: 22 },
+      { header: 'ชื่อ-นามสกุล', key: 'fullname', width: 30 },
+      { header: 'อีเมล', key: 'email', width: 34 },
+      { header: 'บทบาท (Role)', key: 'role', width: 28 },
+      { header: 'แผนก/ฝ่าย', key: 'departments', width: 28 },
+      { header: 'เบอร์โทรศัพท์', key: 'tel', width: 18 },
+      { header: 'สถานะการใช้งาน', key: 'status', width: 20 },
+    ];
+
+    const now = new Date();
+    const nowStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const excelData: any[][] = [];
+
+
+    excelData.push(['User Management Export']);
+    excelData.push([`ส่งออก ${exportUsers.length} รายการ • ${nowStr}`]);
+
+    const headers = columns.map(col => col.header);
+    excelData.push(headers);
+
+    exportUsers.forEach(user => {
+      const rowData = columns.map(col => {
+        const value = user[col.key];
+        return value !== null && value !== undefined && value !== '' ? value : '-';
+      });
+      excelData.push(rowData);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(excelData);
+
+
+    ws['!cols'] = columns.map(col => ({ wch: col.width }));
+
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: columns.length - 1 } }, // Merge แถว 1 (Title)
+      { s: { r: 1, c: 0 }, e: { r: 1, c: columns.length - 1 } }, // Merge แถว 2 (Info)
+    ];
+
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Users');
+
+    const filename = `users_export_${now.toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  };
+
   const closeForm = () => {
     setIsAddingNew(false);
     setIsEditing(false);
@@ -373,9 +437,17 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
 
         {/* ฝั่งขวา: ปุ่ม Action */}
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-5 py-2 bg-white border border-slate-200 rounded-full text-sm font-bold text-slate-600 shadow-sm hover:bg-slate-50 transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            Import
+          <button
+            onClick={handleExportXLSX}
+            title={selectedIds.length === 0 ? "เลือกผู้ใช้งานก่อน Export" : `Export ${selectedIds.length} รายการที่เลือก`}
+            className={`flex items-center gap-2 px-5 py-2 border rounded-full text-sm font-bold shadow-sm transition-all ${selectedIds.length > 0 ? 'bg-[#2D3663] border-[#2D3663] text-white hover:bg-[#3d4f80]' : 'bg-white border-slate-200 text-slate-400 hover:bg-slate-50'}`}
+          >
+            <img
+              src="https://www.svgrepo.com/show/381202/export-arrow-up.svg"
+              alt="export"
+              className={`w-4 h-4 ${selectedIds.length > 0 ? 'invert' : ''}`}
+            />
+            Export{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
           </button>
 
           <button

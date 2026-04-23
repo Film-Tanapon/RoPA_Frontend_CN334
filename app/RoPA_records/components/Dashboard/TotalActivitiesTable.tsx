@@ -13,6 +13,8 @@ const TotalActivitiesTable = ({ onEdit }: Props) => {
 
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const departments = [
@@ -34,7 +36,19 @@ const TotalActivitiesTable = ({ onEdit }: Props) => {
             setLoading(false);
         }
     };
-
+    const formatDate = (dateString: string) => {
+        if (!dateString) return "-";
+        try {
+            const date = new Date(dateString);
+            return new Intl.DateTimeFormat('th-TH', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+            }).format(date);
+        } catch (e) {
+            return "-";
+        }
+    };
     const handleDeleteSelected = async () => {
         if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูล ${selectedIds.length} รายการที่เลือก?`)) return;
         try {
@@ -58,7 +72,33 @@ const TotalActivitiesTable = ({ onEdit }: Props) => {
         const activityName = (item.activity_name || item.activityName || '').toLowerCase();
         const matchesSearch = activityName.includes(searchTerm.toLowerCase()) || item.id?.toString().includes(searchTerm);
         const matchesDept = selectedDepts.length === 0 || selectedDepts.includes(item.department);
-        return matchesSearch && matchesDept;
+
+        // --- ส่วนที่เพิ่มใหม่: เงื่อนไขการกรองวันที่ ---
+        let matchesDate = true;
+        if (startDate || endDate) {
+            const itemDate = new Date(item.create_date);
+
+            // เช็คว่ามีข้อมูลวันที่ใน Database หรือไม่ (ถ้าไม่มีจะไม่นำมาแสดงเมื่อมีการกรองวันที่)
+            if (isNaN(itemDate.getTime())) {
+                matchesDate = false;
+            } else {
+                // รีเซ็ตเวลาให้เริ่มที่ 00:00:00 ของวันนั้นๆ เพื่อให้เปรียบเทียบแค่ "วัน"
+                itemDate.setHours(0, 0, 0, 0);
+
+                if (startDate) {
+                    const sDate = new Date(startDate);
+                    sDate.setHours(0, 0, 0, 0);
+                    if (itemDate < sDate) matchesDate = false;
+                }
+
+                if (endDate) {
+                    const eDate = new Date(endDate);
+                    eDate.setHours(23, 59, 59, 999); // ปรับเวลาของวันสิ้นสุดให้เป็น 23:59:59 ครอบคลุมทั้งวัน
+                    if (itemDate > eDate) matchesDate = false;
+                }
+            }
+        }
+        return matchesSearch && matchesDept && matchesDate;
     });
 
     return (
@@ -84,16 +124,48 @@ const TotalActivitiesTable = ({ onEdit }: Props) => {
                             <span className={`text-[10px] transition-transform ${isFilterOpen ? 'rotate-180' : ''}`}>▼</span>
                         </button>
                         {isFilterOpen && (
-                            <div className="absolute left-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-5 animate-in zoom-in-95">
+                            // ปรับความกว้างเป็น w-[340px] เพื่อให้มีพื้นที่วางช่องใส่วันที่คู่กัน
+                            <div className="absolute left-0 mt-2 w-[340px] bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-5 animate-in zoom-in-95">
                                 <p className="text-sm font-black text-[#2D3663] mb-4">แผนก</p>
-                                <div className="max-h-60 overflow-y-auto space-y-2.5 pr-2 custom-scrollbar">
+                                <div className="max-h-48 overflow-y-auto space-y-2.5 pr-2 custom-scrollbar">
                                     {departments.map((dept) => (
                                         <label key={dept} className="flex items-center gap-3 group cursor-pointer">
-                                            <input type="checkbox" checked={selectedDepts.includes(dept)} onChange={() => setSelectedDepts(prev => prev.includes(dept) ? prev.filter(d => d !== dept) : [...prev, dept])} className="h-5 w-5 rounded border-slate-300 text-[#8B93C5]" />
+                                            <input type="checkbox" checked={selectedDepts.includes(dept)} onChange={() => setSelectedDepts(prev => prev.includes(dept) ? prev.filter(d => d !== dept) : [...prev, dept])} className="h-5 w-5 rounded border-slate-300 text-[#8B93C5] focus:ring-[#8B93C5]/30" />
                                             <span className="text-sm text-slate-600 group-hover:text-[#2D3663]">{dept}</span>
                                         </label>
                                     ))}
                                 </div>
+                                <div className="h-px bg-slate-100 w-full mb-4"></div> {/* เส้นกั้นแบ่งสัดส่วน */}
+
+                                {/* --- ส่วนที่เพิ่มใหม่: กรองช่วงวันที่ --- */}
+                                <div className="mb-5">
+                                    <p className="text-sm font-black text-[#2D3663] mb-3">ช่วงวันที่สร้าง</p>
+                                    <div className="flex gap-3">
+                                        <div className="flex-1">
+                                            <label className="text-xs text-slate-500 mb-1.5 block">ตั้งแต่</label>
+                                            <input
+                                                type="date"
+                                                value={startDate}
+                                                onChange={(e) => setStartDate(e.target.value)}
+                                                className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 outline-none focus:bg-white focus:ring-2 focus:ring-[#8B93C5]/20 focus:border-[#8B93C5] transition-all"
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <label className="text-xs text-slate-500 mb-1.5 block">ถึง</label>
+                                            <input
+                                                type="date"
+                                                value={endDate}
+                                                onChange={(e) => setEndDate(e.target.value)}
+                                                className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 outline-none focus:bg-white focus:ring-2 focus:ring-[#8B93C5]/20 focus:border-[#8B93C5] transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+
+
+                                {/* กรองแผนก (ของเดิม) */}
+
                             </div>
                         )}
                     </div>
@@ -177,18 +249,29 @@ const TotalActivitiesTable = ({ onEdit }: Props) => {
                                     <td className="p-5 text-slate-600">{item.data_subject || '-'}</td>
                                     <td className="p-5 text-slate-500">{item.data_category || 'ทั่วไป'}</td>
                                     <td className="p-5 text-center">
-                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black ${item.risk_level === 'สูง' ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-500'}`}>
-                                            {item.risk_level || 'ต่ำ'}
+                                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black ${item.risk_level === 'ความเสี่ยงระดับสูง'
+                                            ? 'bg-red-50 text-red-500'
+                                            : item.risk_level === 'ความเสี่ยงระดับกลาง'
+                                                ? 'bg-yellow-50 text-yellow-600'
+                                                : 'bg-emerald-50 text-emerald-500'
+                                            }`}>
+                                            {item.risk_level || 'ความเสี่ยงระดับต่ำ'}
                                         </span>
                                     </td>
-                                    <td className={`p-5 text-center font-black text-xs ${item.status === 'Action Required'
-                                            ? 'text-slate-400'     // ถ้าเป็น ACTION REQUIRED ให้ใช้สีเทา
-                                            : 'text-emerald-500'   // ถ้าเป็นสถานะอื่น (เช่น Active) ให้ใช้สีเขียว
-                                        }`}>
-                                        {item.status || 'Active'}
+                                    <td className="p-5 text-center text-sm font-medium">
+                                        <span className={`px-4 py-1.5 rounded-full text-white ${item.status === 'Reviewed' || item.status === 'Reviewd'
+                                            ? 'bg-[#53a362]'
+                                            : item.status === 'Pending'
+                                                ? 'bg-[#efde4e]'
+                                                : item.status === 'Expired'
+                                                    ? 'bg-[#EF4444]'
+                                                    : 'bg-slate-400'
+                                            }`}>
+                                            {item.status || 'Action Required'}
+                                        </span>
                                     </td>
-                                    <td className="p-5 text-right text-slate-400 font-bold italic">
-                                        {item.createdAt ? new Date(item.createdAt).toLocaleDateString('th-TH') : '11/04/2026'}
+                                    <td className="p-4 text-right text-slate-400 italic font-bold whitespace-nowrap">
+                                        {formatDate(item.create_date)}
                                     </td>
                                 </tr>
                             ))}

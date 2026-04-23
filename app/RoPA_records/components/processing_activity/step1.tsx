@@ -228,7 +228,29 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
         consent_exempt_basis: formData.useWithoutConsent || '-',
         right_rejection_reason: formData.denialOfRights || '-',
         risk_level: formData.riskLevel,
-        status: 'Pending',
+        status: (() => {
+          if (cleanStartDate && cleanStartDate !== '-' && formData.retentionPeriod && formData.retentionPeriod !== '-') {
+            const start = new Date(cleanStartDate);
+            if (!isNaN(start.getTime())) {
+              // Parse period: supports "3 ปี", "6 เดือน", bare numbers (→ years)
+              const s = formData.retentionPeriod.trim().toLowerCase();
+              const numMatch = s.match(/^([\d.]+)/);
+              if (numMatch) {
+                const num = parseFloat(numMatch[1]);
+                if (!isNaN(num)) {
+                  const isMonth = s.includes('เดือน') || s.includes('month') || s.includes('mo');
+                  const isYear  = s.includes('ปี')    || s.includes('year')  || s.includes('yr');
+                  const months  = isMonth ? num : (isYear ? num * 12 : num * 12);
+                  const endDate = new Date(start);
+                  endDate.setMonth(endDate.getMonth() + months);
+                  endDate.setHours(23, 59, 59, 999);
+                  if (endDate < new Date()) return 'Expired';
+                }
+              }
+            }
+          }
+          return 'Pending';
+        })(),
       };
 
       // 2. บันทึก RoPA
