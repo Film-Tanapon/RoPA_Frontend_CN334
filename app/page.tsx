@@ -20,7 +20,6 @@ const LoginPage = () => {
 
       const data = await response.json();
       if (response.ok) {
-        console.log("Token: " + data.access_token)
         localStorage.setItem("access_token",data.access_token)
         alert("เข้าสู่ระบบสำเร็จ!");
         router.push('/RoPA_records');

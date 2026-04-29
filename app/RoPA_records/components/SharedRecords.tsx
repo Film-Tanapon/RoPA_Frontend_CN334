@@ -45,6 +45,24 @@ export default function SharedRecords({ setActiveMenu }: SharedRecordsProps) {
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : '';
 
+  // อ่าน role จาก JWT payload
+  const getCurrentUserRole = (): string => {
+    if (typeof window === 'undefined' || !token) return '';
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.role || '';
+    } catch {
+      return '';
+    }
+  };
+
+  // กำหนด role ของ record ที่จะแสดง (ตรงข้ามกับ role ของ user ที่ login)
+  const getTargetCreatorRole = (myRole: string): string | null => {
+    if (myRole === 'Data Controller') return 'Data Processor';
+    if (myRole === 'Data Processor') return 'Data Controller';
+    return null; // role อื่น (เช่น Admin) เห็นทั้งหมด
+  };
+
   const safeSplit = (str: string | undefined | null) => {
     if (!str || str === '-' || str === '[]') return [];
     return str.split(', ').filter(item => item.trim() !== '');
@@ -53,13 +71,26 @@ export default function SharedRecords({ setActiveMenu }: SharedRecordsProps) {
   useEffect(() => {
     if (step !== 1) return;
     setIsLoading(true);
+
+    const myRole = getCurrentUserRole();
+    const targetRole = getTargetCreatorRole(myRole);
+
     fetch(`${API_URL}/ropa-records`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.json())
       .then(data => {
         const records = Array.isArray(data) ? data : (data.data || []);
-        setReviewedRecords(records.filter((r: any) => r.status?.toLowerCase() === 'reviewed'));
+
+        const filtered = records.filter((r: any) => {
+          const isReviewed = r.status?.toLowerCase() === 'reviewed';
+          // ถ้า targetRole เป็น null (เช่น Admin) → เห็นทุก reviewed record
+          // ถ้ามี targetRole → กรองเฉพาะ record ที่สร้างโดย role ที่กำหนด
+          const isFromTargetRole = targetRole === null || r.creator_role === targetRole;
+          return isReviewed && isFromTargetRole;
+        });
+
+        setReviewedRecords(filtered);
       })
       .catch(err => console.error('Failed to fetch records:', err))
       .finally(() => setIsLoading(false));
