@@ -32,7 +32,7 @@ const Sidebar = ({ activeMenu, setActiveMenu, userRole }: SidebarProps) => {
         },
         {
           name: 'Shared Records',
-          roles: ['Data Processor'],
+          roles: ['Data Processor','Data Controller'],
           icon: (
             <img
               src="https://www.svgrepo.com/show/485420/download.svg"
