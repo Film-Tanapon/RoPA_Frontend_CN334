@@ -23,7 +23,8 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isDateOpen, setIsDateOpen] = useState(false);
 
-  const API_URL = "http://localhost:3340/users";
+  const API_BASE = process.env.API_URL || 'http://localhost:3340';
+  const API_URL = `${API_BASE}/users`;
 
   useEffect(() => {
     loadUsers();
@@ -171,7 +172,7 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
     };
     try {
       const token = localStorage.getItem('access_token');
-      const res = await fetch("http://localhost:3340/users", {
+      const res = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

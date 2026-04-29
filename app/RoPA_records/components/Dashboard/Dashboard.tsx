@@ -31,7 +31,7 @@ interface DashboardData {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const API_BASE = 'http://localhost:3340';
+const API_BASE = process.env.API_URL || 'http://localhost:3340';
 
 const STATUS_MAP: Record<string, keyof Pick<DashboardData, 'reviewed' | 'actionRequired' | 'expired' | 'pendingReview'>> = {
   reviewed:       'reviewed',

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 
-const API_BASE = 'http://localhost:3340';
+const API_BASE = process.env.API_URL || 'http://localhost:3340';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface RoPARecord {

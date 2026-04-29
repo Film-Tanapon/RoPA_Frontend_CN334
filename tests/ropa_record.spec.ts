@@ -3,9 +3,10 @@ import { test, expect } from "@playwright/test";
 test.describe("RoPA Records Page Tests", () => {
 
   test("ทดสอบระบบค้นหากิจกรรม RoPA บนตาราง (ด้วย API Mocking)", async ({ page }) => {
+    const API_URL = process.env.API_URL || 'http://localhost:3340';
     
     // 1. จำลองข้อมูล (Mock API) ให้ตรงกับที่ page.tsx คาดหวัง
-    await page.route("http://localhost:3340/ropa-records", async (route) => {
+    await page.route(`${API_URL}/ropa-records`, async (route) => {
       const mockData = [
         {
           id: "ROPA-001",
@@ -47,8 +48,9 @@ test.describe("RoPA Records Page Tests", () => {
   });
 
   test("ทดสอบการเลือก Checkbox เพื่อจัดการข้อมูล", async ({ page }) => {
+    const API_URL = process.env.API_URL || 'http://localhost:3340';
     // จำลองข้อมูล 1 รายการ
-    await page.route("http://localhost:3340/ropa-records", async (route) => {
+    await page.route(`${API_URL}/ropa-records`, async (route) => {
       await route.fulfill({ json: [{
         id: "ROPA-999",
         activity_name: "ระบบทดสอบ",

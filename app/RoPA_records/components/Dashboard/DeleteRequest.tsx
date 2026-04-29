@@ -5,6 +5,8 @@ interface DeleteRequestProps {
   userRole: string;
 }
 
+const API_BASE = process.env.API_URL || 'http://localhost:3340';
+
 // ========================================================
 // Inline RoPA Form (adapted from step1.tsx)
 // ========================================================
@@ -114,7 +116,7 @@ function RopaFormReadOnly({
     const fetchRelated = async () => {
       try {
         const resTransfer = await fetch(
-          `http://localhost:3340/transfers/${initialData.id}`,
+          `${API_BASE}/transfers/${initialData.id}`,
           { headers }
         );
         let transferData = null;
@@ -124,7 +126,7 @@ function RopaFormReadOnly({
         }
 
         const resSecurity = await fetch(
-          `http://localhost:3340/security/${initialData.id}`,
+          `${API_BASE}/security/${initialData.id}`,
           { headers }
         );
         let securityData: any[] = [];
@@ -542,7 +544,7 @@ export default function DeleteRequest({ userRole }: DeleteRequestProps) {
       try {
         if (isDPO) {
           // DPO: fetch all ropa records
-          const res = await fetch('http://localhost:3340/ropa-records', {
+          const res = await fetch(`${API_BASE}/ropa-records`, {
             headers: authHeaders(),
           });
           if (res.ok) {
@@ -551,7 +553,7 @@ export default function DeleteRequest({ userRole }: DeleteRequestProps) {
           }
         } else if (isAdmin) {
           // Admin: fetch delete requests, then enrich with ropa data
-          const res = await fetch('http://localhost:3340/requests', {
+          const res = await fetch(`${API_BASE}/requests`, {
             headers: authHeaders(),
           });
           if (res.ok) {
@@ -583,7 +585,7 @@ export default function DeleteRequest({ userRole }: DeleteRequestProps) {
       } else if (isAdmin) {
         // item is a request, need to fetch the ropa record
         setSelectedRequest(item);
-        const res = await fetch(`http://localhost:3340/ropa-records/${item.ropa_id}`, {
+        const res = await fetch(`${API_BASE}/ropa-records/${item.ropa_id}`, {
           headers: authHeaders(),
         });
         if (res.ok) {
@@ -613,7 +615,7 @@ export default function DeleteRequest({ userRole }: DeleteRequestProps) {
         create_by: userId,
       };
 
-      const res = await fetch('http://localhost:3340/requests', {
+      const res = await fetch(`${API_BASE}/requests`, {
         method: 'POST',
         headers: authHeaders(),
         body: JSON.stringify(payload),
@@ -646,7 +648,7 @@ export default function DeleteRequest({ userRole }: DeleteRequestProps) {
     setIsSubmitting(true);
     try {
       // Delete the ropa record
-      const res = await fetch(`http://localhost:3340/ropa-records/${selectedItem.id}`, {
+      const res = await fetch(`${API_BASE}/ropa-records/${selectedItem.id}`, {
         method: 'DELETE',
         headers: authHeaders(),
       });
@@ -654,7 +656,7 @@ export default function DeleteRequest({ userRole }: DeleteRequestProps) {
       if (res.ok) {
         // Also update the request status to Approved/Completed if we have request id
         if (selectedRequest?.id) {
-          await fetch(`http://localhost:3340/requests/${selectedRequest.id}`, {
+          await fetch(`${API_BASE}/requests/${selectedRequest.id}`, {
             method: 'PUT',
             headers: authHeaders(),
             body: JSON.stringify({ status: 'Approved' }),
@@ -664,7 +666,7 @@ export default function DeleteRequest({ userRole }: DeleteRequestProps) {
         alert('ลบข้อมูลเรียบร้อยแล้ว');
 
         // Refresh list
-        const updatedRes = await fetch('http://localhost:3340/requests', {
+        const updatedRes = await fetch(`${API_BASE}/requests`, {
           headers: authHeaders(),
         });
         if (updatedRes.ok) {

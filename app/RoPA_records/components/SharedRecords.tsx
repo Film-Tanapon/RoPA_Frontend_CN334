@@ -19,6 +19,8 @@ const ReadOnlyCheckbox = ({ checked }: { checked: boolean }) => (
   </div>
 );
 
+const API_URL = process.env.API_URL || 'http://localhost:3340';
+
 export default function SharedRecords({ setActiveMenu }: SharedRecordsProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [reviewedRecords, setReviewedRecords] = useState<any[]>([]);
@@ -51,7 +53,7 @@ export default function SharedRecords({ setActiveMenu }: SharedRecordsProps) {
   useEffect(() => {
     if (step !== 1) return;
     setIsLoading(true);
-    fetch('http://localhost:3340/ropa-records', {
+    fetch(`${API_URL}/ropa-records`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -95,8 +97,8 @@ export default function SharedRecords({ setActiveMenu }: SharedRecordsProps) {
 
     try {
       const [resTransfer, resSecurity] = await Promise.all([
-        fetch(`http://localhost:3340/transfers/${record.id}`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`http://localhost:3340/security/${record.id}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_URL}/transfers/${record.id}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_URL}/security/${record.id}`, { headers: { 'Authorization': `Bearer ${token}` } }),
       ]);
 
       let transferData: any = null;

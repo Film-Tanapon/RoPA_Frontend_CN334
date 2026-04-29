@@ -27,7 +27,8 @@ const TotalActivitiesTable = ({ onEdit, userRole }: Props) => {
         'ฝ่ายลูกค้าสัมพันธ์ / บริการลูกค้า', 'ฝ่ายการตลาด', 'ฝ่ายกฎหมายและกำกับการดูแล'
     ];
 
-    const API_URL = 'http://localhost:3340/ropa-records';
+    const API_BASE = process.env.API_URL || 'http://localhost:3340';
+    const API_URL = `${API_BASE}/ropa-records`;
 
     const fetchData = async () => {
         try {
@@ -84,7 +85,7 @@ const TotalActivitiesTable = ({ onEdit, userRole }: Props) => {
         return matchesSearch && matchesDept && matchesDate;
     });
 
-    const handleExportXLSX = () => {
+    const handleExportXLSX = async () => {
         const exportRecords = selectedIds.length > 0
             ? records.filter(r => selectedIds.includes(r.id?.toString()))
             : [];
@@ -95,47 +96,116 @@ const TotalActivitiesTable = ({ onEdit, userRole }: Props) => {
         }
 
         const columns = [
-            { header: 'ID', key: 'id', width: 8 },
-            { header: 'ชื่อกิจกรรม (Activity Name)', key: 'activity_name', width: 35 },
-            { header: 'วันที่เริ่มต้น (Start Date)', key: 'start_date', width: 20 },
-            { header: 'ระยะเวลาเก็บรักษา (Retention Period)', key: 'retention_period', width: 30 },
-            { header: 'วัตถุประสงค์ (Purpose)', key: 'purpose', width: 40 },
-            { header: 'เจ้าของข้อมูล (Data Owner)', key: 'data_owner', width: 25 },
-            { header: 'เจ้าของข้อมูลส่วนบุคคล (Data Subject)', key: 'data_subject', width: 30 },
-            { header: 'หมวดหมู่ข้อมูล (Data Category)', key: 'data_category', width: 25 },
-            { header: 'ประเภทข้อมูล (Data Type)', key: 'data_type', width: 20 },
-            { header: 'ข้อมูลส่วนบุคคล (Personal Info)', key: 'personal_info', width: 35 },
-            { header: 'แหล่งที่มาข้อมูล (Data Source)', key: 'data_source', width: 25 },
-            { header: 'รายละเอียดแหล่งข้อมูลอื่นๆ', key: 'data_source_other_spec', width: 30 },
-            { header: 'ฐานทางกฎหมาย (Legal Basis)', key: 'legal_basis', width: 30 },
-            { header: 'วิธีการเก็บรวบรวม (Collection Method)', key: 'collection_method', width: 30 },
-            { header: 'รายละเอียดช่องทางดิจิทัล', key: 'digital_spec', width: 30 },
-            { header: 'รายละเอียดช่องทางกระดาษ', key: 'paper_spec', width: 30 },
-            { header: 'เด็กอายุต่ำกว่า 10 ปี', key: 'minor_under10', width: 20 },
-            { header: 'เด็กอายุ 10-20 ปี', key: 'minor10to20', width: 18 },
-            { header: 'การส่งข้อมูลต่างประเทศ (Transfer Abroad)', key: 'transfer_abroad', width: 30 },
-            { header: 'ประเทศปลายทาง (Destination Country)', key: 'destination_country', width: 25 },
-            { header: 'การส่งข้อมูลบริษัทในเครือ', key: 'transfer_affiliate', width: 28 },
-            { header: 'รายละเอียดบริษัทในเครือ', key: 'transfer_affiliate_spec', width: 30 },
-            { header: 'วิธีการส่งข้อมูล (Transfer Method)', key: 'transfer_method', width: 30 },
-            { header: 'มาตรการคุ้มครอง (Protection Measure)', key: 'protection_measure', width: 35 },
-            { header: 'ข้อยกเว้น Art.28', key: 'exception_art28', width: 28 },
-            { header: 'ประเภทข้อมูลที่เก็บ (Data Types)', key: 'data_types', width: 35 },
-            { header: 'วิธีการจัดเก็บ (Storage Methods)', key: 'storage_methods', width: 35 },
-            { header: 'สิทธิ์การเข้าถึง (Access Rights)', key: 'access_rights', width: 30 },
-            { header: 'วิธีการลบข้อมูล (Deletion Method)', key: 'deletion_method', width: 30 },
-            { header: 'การใช้ข้อมูลโดยไม่ยินยอม', key: 'use_without_consent', width: 30 },
-            { header: 'การปฏิเสธสิทธิ์ (Denial of Rights)', key: 'denial_of_rights', width: 30 },
-            { header: 'ระดับความเสี่ยง (Risk Level)', key: 'risk_level', width: 25 },
-            { header: 'สถานะ (Status)', key: 'status', width: 18 },
-            { header: 'มาตรการองค์กร (Org Measure)', key: 'org_measure', width: 35 },
-            { header: 'มาตรการเทคนิค (Tech Measure)', key: 'tech_measure', width: 35 },
-            { header: 'มาตรการทางกายภาพ (Physical Measure)', key: 'physical_measure', width: 35 },
-            { header: 'การควบคุมการเข้าถึง (Access Control)', key: 'access_control', width: 35 },
-            { header: 'ความรับผิดชอบผู้ใช้ (User Responsibility)', key: 'user_responsibility', width: 35 },
-            { header: 'มาตรการตรวจสอบ (Audit Measure)', key: 'audit_measure', width: 35 },
-            { header: 'วันที่สร้าง (Create Date)', key: 'create_date', width: 20 },
+            { header: 'ID', width: 8 },
+            { header: 'ชื่อกิจกรรม (Activity Name)', width: 35 },
+            { header: 'วันที่เริ่มต้น (Start Date)', width: 20 },
+            { header: 'ระยะเวลาเก็บรักษา (Retention Period)', width: 30 },
+            { header: 'วัตถุประสงค์ (Purpose)', width: 40 },
+            { header: 'เจ้าของข้อมูล (Data Owner)', width: 25 },
+            { header: 'เจ้าของข้อมูลส่วนบุคคล (Data Subject)', width: 30 },
+            { header: 'หมวดหมู่ข้อมูล (Data Category)', width: 25 },
+            { header: 'ประเภทข้อมูล (Data Type)', width: 20 },
+            { header: 'ข้อมูลส่วนบุคคล (Personal Info)', width: 35 },
+            { header: 'แหล่งที่มาข้อมูล (Data Source)', width: 25 },
+            { header: 'ฐานทางกฎหมาย (Legal Basis)', width: 30 },
+            { header: 'วิธีการเก็บรวบรวม (Collection Method)', width: 30 },
+            { header: 'เด็กอายุต่ำกว่า 10 ปี', width: 20 },
+            { header: 'เด็กอายุ 10-20 ปี', width: 18 },
+            { header: 'การส่งข้อมูลต่างประเทศ (Transfer Abroad)', width: 30 },
+            { header: 'ประเทศปลายทาง (Destination Country)', width: 25 },
+            { header: 'การส่งข้อมูลบริษัทในเครือ', width: 28 },
+            { header: 'รายละเอียดบริษัทในเครือ', width: 30 },
+            { header: 'วิธีการส่งข้อมูล (Transfer Method)', width: 30 },
+            { header: 'มาตรการคุ้มครอง (Protection Measure)', width: 35 },
+            { header: 'ข้อยกเว้น Art.28', width: 28 },
+            { header: 'ประเภทข้อมูลที่เก็บ (Data Types)', width: 35 },
+            { header: 'วิธีการจัดเก็บ (Storage Methods)', width: 35 },
+            { header: 'สิทธิ์การเข้าถึง (Access Rights)', width: 30 },
+            { header: 'วิธีการลบข้อมูล (Deletion Method)', width: 30 },
+            { header: 'การใช้ข้อมูลโดยไม่ยินยอม', width: 30 },
+            { header: 'การปฏิเสธสิทธิ์ (Denial of Rights)', width: 30 },
+            { header: 'ระดับความเสี่ยง (Risk Level)', width: 25 },
+            { header: 'สถานะ (Status)', width: 18 },
+            { header: 'มาตรการเชิงองค์กร (Org Measure)', width: 35 },
+            { header: 'มาตรการเชิงเทคนิค (Tech Measure)', width: 35 },
+            { header: 'มาตรการเชิงกายภาพ (Physical Measure)', width: 35 },
+            { header: 'การควบคุมการเข้าถึงข้อมูล (Access Control)', width: 35 },
+            { header: 'ความรับผิดชอบของผู้ใช้งาน (User Responsibility)', width: 35 },
+            { header: 'มาตรการตรวจสอบ (Audit Measure)', width: 35 },
+            { header: 'วันที่สร้าง (Create Date)', width: 20 },
         ];
+
+        const token = localStorage.getItem('access_token');
+        const headers: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+        // Fetch Transfer และ Security ของทุก record พร้อมกัน
+        const enrichedRecords = await Promise.all(
+            exportRecords.map(async (item) => {
+                let transferData: any = {};
+                let secMap: Record<string, string> = {};
+
+                try {
+                    const resTransfer = await fetch(`${API_BASE}/transfers/${item.id}`, { headers });
+                    if (resTransfer.ok) {
+                        const tJson = await resTransfer.json();
+                        transferData = tJson.data || tJson || {};
+                    }
+                } catch (_) {}
+
+                try {
+                    const resSecurity = await fetch(`${API_BASE}/security/${item.id}`, { headers });
+                    if (resSecurity.ok) {
+                        const sJson = await resSecurity.json();
+                        const secList: any[] = Array.isArray(sJson.data) ? sJson.data : (Array.isArray(sJson) ? sJson : []);
+                        secList.forEach(sec => { secMap[sec.measure_type] = sec.description; });
+                    }
+                } catch (_) {}
+
+                // แปลง boolean fields และ map ทุก field ให้ถูกต้อง
+                const rName = transferData?.recipient_name;
+                const hasRecipient = rName && rName !== '-' && rName !== 'no';
+
+                return [
+                    item.id ?? '-',
+                    item.activity_name ?? '-',
+                    item.retention_start ?? '-',                              // start_date → retention_start
+                    item.retention_period ?? '-',
+                    item.purpose ?? '-',
+                    item.data_owner ?? '-',
+                    item.data_subject ?? '-',
+                    item.data_category ?? '-',
+                    item.is_sensitive ? 'ข้อมูลอ่อนไหว' : 'ข้อมูลทั่วไป',   // boolean → label
+                    item.personal_info ?? '-',
+                    item.source ?? '-',                                        // data_source → source
+                    item.legal_basis ?? '-',
+                    item.collection_method ?? '-',
+                    item.is_under_10 ? 'มี' : 'ไม่มี',                       // boolean → label
+                    item.is_age_10_20 ? 'มี' : 'ไม่มี',                      // boolean → label
+                    item.is_international ? 'มี' : 'ไม่มี',                  // boolean → label
+                    transferData?.country && transferData.country !== '-' ? transferData.country : '-',
+                    hasRecipient ? 'มี' : 'ไม่มี',
+                    hasRecipient && rName !== 'yes' ? rName : '-',
+                    transferData?.transfer_method && transferData.transfer_method !== '-' ? transferData.transfer_method : '-',
+                    transferData?.protection_measure && transferData.protection_measure !== '-' ? transferData.protection_measure : '-',
+                    transferData?.protection_std && transferData.protection_std !== '-' ? transferData.protection_std : '-',
+                    item.storage_format ?? '-',                                // data_types → storage_format
+                    item.retention_method ?? '-',                              // storage_methods → retention_method
+                    item.access_control ?? '-',                                // access_rights → access_control
+                    item.disposal_method ?? '-',                               // deletion_method → disposal_method
+                    item.consent_exempt_basis ?? '-',                          // use_without_consent → consent_exempt_basis
+                    item.right_rejection_reason ?? '-',                        // denial_of_rights → right_rejection_reason
+                    item.risk_level ?? '-',
+                    item.status ?? '-',
+                    secMap['มาตรการเชิงองค์กร'] ?? '-',
+                    secMap['มาตรการเชิงเทคนิค'] ?? '-',
+                    secMap['มาตรการเชิงกายภาพ'] ?? '-',
+                    secMap['การควบคุมการเข้าถึง'] ?? '-',
+                    secMap['ความรับผิดชอบของผู้ใช้งาน'] ?? '-',
+                    secMap['มาตรการตรวจสอบ'] ?? '-',
+                    formatDate(item.create_date),
+                ];
+            })
+        );
 
         const now = new Date();
         const nowStr = now.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -144,16 +214,7 @@ const TotalActivitiesTable = ({ onEdit, userRole }: Props) => {
         excelData.push(['RoPA Records Export — บันทึกรายการกิจกรรมการประมวลผลข้อมูลส่วนบุคคล']);
         excelData.push([`ส่งออก ${exportRecords.length} รายการ • ${nowStr}`]);
         excelData.push(columns.map(col => col.header));
-
-        exportRecords.forEach(item => {
-            const rowData = columns.map(col => {
-                const value = item[col.key];
-                if (Array.isArray(value)) return value.join(', ');
-                if (col.key === 'create_date' && value) return formatDate(value);
-                return value !== null && value !== undefined && value !== '' ? value : '-';
-            });
-            excelData.push(rowData);
-        });
+        enrichedRecords.forEach(row => excelData.push(row));
 
         const ws = XLSX.utils.aoa_to_sheet(excelData);
         ws['!cols'] = columns.map(col => ({ wch: col.width }));

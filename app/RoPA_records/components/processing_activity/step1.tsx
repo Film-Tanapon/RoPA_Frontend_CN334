@@ -8,6 +8,8 @@ interface CombinedFormProps {
   userRole?: string;
 }
 
+const API_BASE = process.env.API_URL || 'http://localhost:3340';
+
 export default function RopaCombinedForm({ onCancel, onSuccess, initialData, userRole }: CombinedFormProps) {
   const token = localStorage.getItem('access_token');
   const [formData, setFormData] = useState({
@@ -92,14 +94,14 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData, use
       const headers = { "Authorization": `Bearer ${token}` };
 
       try {
-        const resTransfer = await fetch(`http://localhost:3340/transfers/${initialData.id}`, { headers });
+        const resTransfer = await fetch(`${API_BASE}/transfers/${initialData.id}`, { headers });
         let transferData = null;
         if (resTransfer.ok) {
           const tJson = await resTransfer.json();
           transferData = tJson.data || tJson;
         }
 
-        const resSecurity = await fetch(`http://localhost:3340/security/${initialData.id}`, { headers });
+        const resSecurity = await fetch(`${API_BASE}/security/${initialData.id}`, { headers });
         let securityData: any[] = [];
         if (resSecurity.ok) {
           const sJson = await resSecurity.json();
@@ -186,7 +188,7 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData, use
     setIsDeleting(true);
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`http://localhost:3340/ropa-records/${initialData.id}`, {
+      const res = await fetch(`${API_BASE}/ropa-records/${initialData.id}`, {
         method: "DELETE", headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) { alert("ลบข้อมูลเรียบร้อยแล้ว"); if (onSuccess) onSuccess(); }
@@ -256,8 +258,8 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData, use
 
       // 2. บันทึก RoPA
       const ropaUrl = isEditing
-        ? `http://localhost:3340/ropa-records/${initialData.id}`
-        : `http://localhost:3340/ropa-records`;
+        ? `${API_BASE}/ropa-records/${initialData.id}`
+        : `${API_BASE}/ropa-records`;
 
       const ropaRes = await fetch(ropaUrl, {
         method: isEditing ? "PUT" : "POST",
@@ -287,7 +289,7 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData, use
 
       // ยิง API Security ทั้งหมดพร้อมกัน
       await Promise.all(securityMeasures.map(measure =>
-        fetch(`http://localhost:3340/security`, {
+        fetch(`${API_BASE}/security`, {
           method: "POST",
           headers: {
             'Content-Type': 'application/json',
@@ -312,11 +314,11 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData, use
           protection_measure: formData.protectionMeasure || '-'
         };
 
-        const checkTransfer = await fetch(`http://localhost:3340/transfers/${targetRopaId}`, { headers });
+        const checkTransfer = await fetch(`${API_BASE}/transfers/${targetRopaId}`, { headers });
         if (checkTransfer.ok) {
           const existing = await checkTransfer.json();
           const tId = existing.id || existing.data?.id;
-          await fetch(`http://localhost:3340/transfers/${tId}`, {
+          await fetch(`${API_BASE}/transfers/${tId}`, {
             method: "PUT",
             headers: {
               'Content-Type': 'application/json',
@@ -325,7 +327,7 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData, use
             body: JSON.stringify(transferPayload)
           });
         } else {
-          await fetch(`http://localhost:3340/transfers`, {
+          await fetch(`${API_BASE}/transfers`, {
             method: "POST",
             headers: {
               'Content-Type': 'application/json',

@@ -14,6 +14,8 @@ import SharedRecords from './components/SharedRecords';
 
 import { jwtDecode } from "jwt-decode";
 
+const API_URL_BASE = process.env.API_URL || 'http://localhost:3340';
+
 export default function RoPARecordsPage() {
   const [activeMenu, setActiveMenu] = useState('');
   const [userRole, setUserRole] = useState<string>('');
@@ -23,7 +25,7 @@ export default function RoPARecordsPage() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [records, setRecords] = useState<any[]>([]);
 
-  const API_URL = "http://localhost:3340/ropa-records";
+  const API_URL = `${API_URL_BASE}/ropa-records`;
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "-";

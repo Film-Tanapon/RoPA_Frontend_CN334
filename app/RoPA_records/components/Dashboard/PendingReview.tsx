@@ -5,6 +5,8 @@ interface PendingReviewProps {
   onBack?: () => void;
 }
 
+const API_BASE = process.env.API_URL || 'http://localhost:3340';
+
 const CustomRadio = ({ name, value, checked, onChange }: any) => (
   <div className="relative flex items-center justify-center">
     <input
@@ -54,7 +56,7 @@ export default function PendingReview({ onBack }: PendingReviewProps) {
   useEffect(() => {
     if (step !== 1) return;
     setIsLoading(true);
-    fetch('http://localhost:3340/ropa-records', { headers: { 'Authorization': `Bearer ${token}` } })
+    fetch(`${API_BASE}/ropa-records`, { headers: { 'Authorization': `Bearer ${token}` } })
       .then(res => res.json())
       .then(data => {
         const records = Array.isArray(data) ? data : (data.data || []);
@@ -103,8 +105,8 @@ export default function PendingReview({ onBack }: PendingReviewProps) {
     // Fetch transfer & security data
     try {
       const [resTransfer, resSecurity] = await Promise.all([
-        fetch(`http://localhost:3340/transfers/${record.id}`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`http://localhost:3340/security/${record.id}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/transfers/${record.id}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(`${API_BASE}/security/${record.id}`, { headers: { 'Authorization': `Bearer ${token}` } }),
       ]);
 
       let transferData: any = null;
@@ -161,7 +163,7 @@ export default function PendingReview({ onBack }: PendingReviewProps) {
     if (!selectedRecord) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch(`http://localhost:3340/ropa-records/${selectedRecord.id}`, {
+      const res = await fetch(`${API_BASE}/ropa-records/${selectedRecord.id}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({ status: 'Reviewed' }),
@@ -187,7 +189,7 @@ export default function PendingReview({ onBack }: PendingReviewProps) {
 
     try {
       // 1. อัปเดต status เป็น Action Required
-      const statusRes = await fetch(`http://localhost:3340/ropa-records/${selectedRecord.id}`, {
+      const statusRes = await fetch(`${API_BASE}/ropa-records/${selectedRecord.id}`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({ status: 'Action Required' }),
@@ -198,7 +200,7 @@ export default function PendingReview({ onBack }: PendingReviewProps) {
       }
 
       // 2. บันทึก feedback
-      const res = await fetch('http://localhost:3340/feedback', {
+      const res = await fetch(`${API_BASE}/feedback`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
