@@ -261,7 +261,7 @@ function RopaFormReadOnly({
         >
           <span className="text-lg">⚠️</span>
           {days <= 0
-            ? `หมดอายุแล้ว ${Math.abs(days)} วัน (วันสิ้นสุด: ${formatDate(initialData?.retention_start)})`
+            ? `หมดอายุแล้ว ${Math.abs(days)} วัน (วันสิ้นสุด: ${formatDate(initialData?.retention_until)})`
             : `อีก ${days} วันจะหมดอายุ`}
         </div>
 
@@ -912,8 +912,8 @@ export default function ExpirationAlert() {
                   >
                     <span>⚠</span>
                     {isExpired
-                      ? `หมดอายุ วันที่ ${formatDate(item.retention_start)} (อีก ${days} วัน)`
-                      : `หมดอายุ วันที่ xx/xx/xxxx (อีก ${days} วัน)`}
+                      ? `หมดอายุ วันที่ ${formatDate(item.retention_until)} (อีก ${Math.abs(days)} วัน)`
+                      : `หมดอายุ วันที่ ${formatDate(item.retention_until)} (อีก ${days} วัน)`}
                   </span>
                 </div>
                 <div className="w-20 h-full absolute right-0 top-0 bg-[#D1EAFF] flex items-center justify-center group-hover:bg-blue-500 transition-all">
