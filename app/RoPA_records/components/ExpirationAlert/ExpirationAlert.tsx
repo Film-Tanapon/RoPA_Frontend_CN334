@@ -827,7 +827,8 @@ export default function ExpirationAlert() {
         ropa_id: selectedItem.id,
         req_type: "Delete",
         status: "Pending",
-        create_by: userId,
+        detail: "Request deletion of expired record"
+
       };
       const res = await fetch(`${API_BASE}/requests`, {
         method: "POST",
