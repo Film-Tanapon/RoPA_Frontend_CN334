@@ -158,43 +158,37 @@ function FeedbackList({
   }, []);
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-[3rem] p-10 shadow-sm animate-in zoom-in duration-300">
-      <div className="flex-1 bg-[#EBF4FA] rounded-2xl p-8 overflow-y-auto custom-scrollbar">
+    <div className="flex flex-col h-full p-4 bg-[#F0F9FF]">
+      <div className="flex-1 space-y-4 overflow-y-auto pr-2 pt-4">
         {loading && <Spinner />}
         {error && <p className="text-red-500 text-center py-6">{error}</p>}
         {!loading && !error && records.length === 0 && (
-          <p className="text-center text-slate-500 py-12">ไม่มีรายการที่ต้องดำเนินการ</p>
+          <div className="flex items-center justify-center h-40">
+            <span className="text-slate-400 text-[15px]">ไม่มีรายการที่ต้องดำเนินการ</span>
+          </div>
         )}
-        <div className="space-y-6 max-w-4xl mx-auto">
-          {records.map((record) => {
-            const feedbacks = feedbackMap[record.id] ?? [];
-            const latestFb = feedbacks[feedbacks.length - 1];
-            return (
-              <div
-                key={record.id}
-                onClick={() => onSelect(record, feedbacks)}
-                className="group flex bg-white rounded-2xl shadow-sm hover:shadow-md cursor-pointer transition-all overflow-hidden border border-slate-100"
-              >
-                <div className="flex-1 p-8">
-                  <h3 className="text-2xl font-normal text-slate-800 mb-4">
-                    {record.activity_name}
-                  </h3>
-                  <p className="text-slate-600 font-medium">
-                    รายละเอียดการแก้ไข : {latestFb?.detail ?? '—'}
-                  </p>
-                </div>
-                <div className="w-24 bg-[#D3E5F5] flex items-center justify-center group-hover:bg-[#C2D9ED] transition-colors">
-                  <svg
-                    width="32" height="32" viewBox="0 0 24 24" fill="none"
-                    stroke="#1E2A5E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                  >
-                    <path d="m9 18 6-6-6-6" />
-                  </svg>
-                </div>
+        {records.map((record) => {
+          const feedbacks = feedbackMap[record.id] ?? [];
+          const latestFb = feedbacks[feedbacks.length - 1];
+          return (
+            <div
+              key={record.id}
+              onClick={() => onSelect(record, feedbacks)}
+              className="flex items-center justify-between bg-white rounded-2xl shadow-md border border-slate-100 hover:border-blue-300 hover:shadow-lg transition-all cursor-pointer group relative overflow-hidden"
+            >
+              <div className="py-5 px-7 flex-1 min-w-0">
+                <span className="text-[#2D3663] font-bold text-[18px] block">{record.activity_name}</span>
+                <p className="text-slate-400 text-[13px] mt-1 truncate">
+                  รายละเอียดการแก้ไข : {latestFb?.detail || '...'}
+                </p>
               </div>
-            );
-          })}
-        </div>
+              <div className="w-16 h-full absolute right-0 top-0 bg-[#D1EAFF] flex items-center justify-center group-hover:bg-blue-500 transition-all rounded-r-2xl">
+                <span className="text-blue-900 group-hover:text-white font-black text-xl">❯</span>
+              </div>
+              <div className="w-16 shrink-0" />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -474,7 +468,7 @@ function FeedbackDetail({
         }
       }
 
-      alert('อัปเดตข้อมูลสำเร็จ! สถานะเปลี่ยนเป็น Pending แล้ว');
+      alert('อัปเดตข้อมูลสำเร็จ!');
       onBack();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึก');
@@ -504,75 +498,68 @@ function FeedbackDetail({
   }
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-[3rem] p-8 shadow-sm animate-in fade-in duration-300 overflow-y-auto custom-scrollbar">
+    <div className="flex flex-col h-full bg-[#F4F8FB] border border-slate-300 rounded-xl p-8 shadow-sm animate-in fade-in duration-300 overflow-y-auto custom-scrollbar">
       {/* Back */}
       <button
         onClick={onBack}
         className="flex items-center gap-2 text-slate-500 hover:text-slate-800 font-bold w-fit mb-6 transition-colors"
       >
-        <svg
-          width="20" height="20" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-        >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="m15 18-6-6 6-6" />
         </svg>
         กลับไปหน้ารายการ
       </button>
 
-      <div className="bg-[#F4F8FB] border border-slate-300 rounded-xl p-8 w-full flex flex-col gap-2">
-        <h2 className="text-2xl font-bold text-[#1E2A5E] mb-2">
-          แก้ไขกิจกรรมการประมวลผล (ROPA)
-        </h2>
+      <div className="flex flex-col gap-10 text-[#1E2A5E]">
 
-        {/* Feedback detail boxes */}
+        {/* ── ส่วนรายละเอียดการแก้ไข (บนสุด) ── */}
         {feedbacks.length > 0 && (
-          <div className="flex flex-col gap-3 mb-4">
+          <div className="flex flex-col gap-2">
+            <h2 className="text-2xl font-bold text-[#1E2A5E] mb-1">รายละเอียดการแก้ไข</h2>
             {feedbacks.map((fb) => (
-              <div key={fb.id} className="bg-[#EBF4FA] border border-[#C5D9ED] p-5 rounded-lg">
-                <h3 className="text-base font-bold text-[#1E2A5E] mb-1">รายละเอียดการแก้ไข</h3>
-                <p className="text-sm text-slate-700">{fb.detail}</p>
-                <p className="text-xs text-slate-400 mt-1">
-                  {new Date(fb.create_date).toLocaleDateString('th-TH')}
+              <div key={fb.id} className="bg-[#EBF4FA] border border-[#C5D9ED] rounded-xl p-5">
+                <p className="text-[14px] text-slate-700 whitespace-pre-wrap">
+                  {fb.detail || '...'}
                 </p>
               </div>
             ))}
           </div>
         )}
 
+        {/* ── กล่องฟอร์มหลัก: บันทึกรายการกิจกรรมการประมวลผล ── */}
         <div className="flex flex-col gap-10">
-
-          {/* ── Section 1 ── */}
           <section className="flex flex-col gap-5">
+            <h2 className="text-2xl font-bold text-[#1E2A5E]">บันทึกรายการกิจกรรมการประมวลผล</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[#1E2A5E] font-medium text-[14px]">ชื่อกิจกรรม</label>
-                <input type="text" name="activityName" value={formData.activityName} onChange={handleChange} className="p-2 border border-slate-300 rounded-md text-[14px] text-slate-800" />
+              <div>
+                <label className="block text-[#1E2A5E] font-medium text-[14px] mb-1.5">ชื่อกิจกรรม</label>
+                <input type="text" name="activityName" value={formData.activityName} onChange={handleChange} className="w-full p-2 border border-slate-300 rounded-md text-[14px] text-slate-800 outline-none focus:border-[#8B93C5]" />
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[#1E2A5E] font-medium text-[14px]">วันที่เริ่มกิจกรรม</label>
-                <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className="p-2 border border-slate-300 rounded-md text-[14px] text-slate-800" />
+              <div>
+                <label className="block text-[#1E2A5E] font-medium text-[14px] mb-1.5">วันที่เริ่มกิจกรรม</label>
+                <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className="w-full p-2 border border-slate-300 rounded-md text-[14px] text-slate-800 outline-none focus:border-[#8B93C5]" />
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[#1E2A5E] font-medium text-[14px]">ระยะเวลาการเก็บรักษา</label>
-                <input type="text" name="retentionPeriod" value={formData.retentionPeriod} onChange={handleChange} placeholder="เช่น 5 ปี, 10 ปี" className="p-2 border border-slate-300 rounded-md text-[14px] text-slate-800" />
+              <div>
+                <label className="block text-[#1E2A5E] font-medium text-[14px] mb-1.5">ระยะเวลาการเก็บรักษาข้อมูล</label>
+                <input type="text" name="retentionPeriod" value={formData.retentionPeriod} onChange={handleChange} placeholder="เช่น 5 ปี, 10 ปี" className="w-full p-2 border border-slate-300 rounded-md text-[14px] text-slate-800 outline-none focus:border-[#8B93C5] placeholder-slate-400" />
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[#1E2A5E] font-medium text-[14px]">วัตถุประสงค์ของการประมวลผล</label>
-              <textarea name="purpose" value={formData.purpose} onChange={handleChange} rows={3} className="p-3 border border-slate-300 rounded-md text-[14px] resize-none text-slate-800" />
+            <div>
+              <label className="block text-[#1E2A5E] font-medium text-[14px] mb-1.5">วัตถุประสงค์ของการประมวลผล</label>
+              <textarea name="purpose" value={formData.purpose} onChange={handleChange} rows={4} className="w-full p-3 border border-slate-300 rounded-md text-[14px] resize-none text-slate-800 outline-none focus:border-[#8B93C5]" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[#1E2A5E] font-medium text-[14px]">เจ้าของข้อมูลส่วนบุคคล</label>
-                <input type="text" name="dataSubject" value={formData.dataSubject} onChange={handleChange} className="p-2 border border-slate-300 rounded-md text-[14px] text-slate-800" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-[#1E2A5E] font-medium text-[14px] mb-1.5">เจ้าของข้อมูลส่วนบุคคล</label>
+                <input type="text" name="dataSubject" value={formData.dataSubject} onChange={handleChange} className="w-full p-2 border border-slate-300 rounded-md text-[14px] text-slate-800 outline-none focus:border-[#8B93C5]" />
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[#1E2A5E] font-medium text-[14px]">หมวดหมู่ข้อมูล</label>
+              <div>
+                <label className="block text-[#1E2A5E] font-medium text-[14px] mb-1.5">หมวดหมู่ข้อมูล</label>
                 <div className="relative">
-                  <select name="dataCategory" value={formData.dataCategory} onChange={handleChange} className="w-full p-2.5 px-4 border border-slate-300 bg-white rounded-md text-[14px] appearance-none pr-10 text-slate-800">
-                    <option value="">Select ...</option>
+                  <select name="dataCategory" value={formData.dataCategory} onChange={handleChange} className="w-full p-2.5 px-4 border border-slate-300 bg-white rounded-md text-[14px] appearance-none pr-10 text-slate-800 outline-none focus:border-[#8B93C5]">
+                    <option value="">Select...</option>
                     <option value="Human Resources">Human Resources</option>
                     <option value="Marketing">Marketing</option>
                   </select>
@@ -593,11 +580,14 @@ function FeedbackDetail({
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[#1E2A5E] font-medium text-[14px]">ข้อมูลส่วนบุคคลที่จัดเก็บ</label>
-              <textarea name="personalInfo" value={formData.personalInfo} onChange={handleChange} rows={2} className="p-3 border border-slate-300 rounded-md text-[14px] resize-none text-slate-800" placeholder="โปรดระบุ เช่น ชื่อ นามสกุล ที่อยู่ เป็นต้น..." />
+              <textarea name="personalInfo" value={formData.personalInfo} onChange={handleChange} rows={3} placeholder="โปรดระบุ เช่น ชื่อ นามสกุล ที่อยู่ เป็นต้น...." className="p-3 border border-slate-300 rounded-md text-[14px] resize-none text-slate-800 outline-none focus:border-[#8B93C5]" />
             </div>
           </section>
 
           <hr className="border-slate-300" />
+
+        {/* ── ส่วนที่ 2: แหล่งที่มา / โอนต่างประเทศ / นโยบาย ── */}
+        <div>
 
           {/* ── Section 2 ── */}
           <section className="flex flex-col gap-5">
@@ -754,7 +744,7 @@ function FeedbackDetail({
 
           <hr className="border-slate-300" />
 
-          {/* ── Section 5 ── */}
+          {/* ── Section 5: ความยินยอม ── */}
           <section className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
               <label className="text-[#1E2A5E] font-medium text-[14px]">การใช้หรือเปิดเผยข้อมูลส่วนบุคคลที่ได้รับการยกเว้นไม่ต้องขอความยินยอม</label>
@@ -764,47 +754,55 @@ function FeedbackDetail({
               <label className="text-[#1E2A5E] font-medium text-[14px]">การปฏิเสธคำขอหรือคัดค้านการใช้สิทธิของเจ้าของข้อมูลส่วนบุคคล</label>
               <input type="text" name="denialOfRights" value={formData.denialOfRights} onChange={handleChange} className="p-2 border border-slate-300 rounded-md text-[14px] w-full text-slate-800" />
             </div>
-            <div className="flex flex-col gap-4 pl-4">
-              {[
-                { label: 'มาตรการเชิงองค์กร', name: 'orgMeasure' },
-                { label: 'มาตรการเชิงเทคนิค', name: 'techMeasure' },
-                { label: 'มาตรการทางกายภาพ', name: 'physicalMeasure' },
-                { label: 'การควบคุมการเข้าถึงข้อมูล', name: 'accessControl' },
-                { label: 'การกำหนดหน้าที่ความรับผิดชอบของผู้ใช้งาน', name: 'userResponsibility' },
-                { label: 'มาตรการตรวจสอบย้อนหลัง', name: 'auditMeasure' },
-              ].map((field) => (
-                <div key={field.name} className="flex flex-col gap-1.5">
-                  <span className="text-[#1E2A5E] text-[13px]">{field.label}</span>
-                  <input
-                    type="text"
-                    name={field.name}
-                    value={(formData as Record<string, unknown>)[field.name] as string}
-                    onChange={handleChange}
-                    className="p-2 border border-slate-300 rounded-md text-[14px] w-full max-w-[700px] text-slate-800"
-                  />
-                </div>
-              ))}
-            </div>
           </section>
+          </div>
         </div>
 
-        {/* ── Buttons ── */}
-        <div className="flex justify-end gap-8 items-center mt-12 pt-6 border-t border-slate-300">
-          <button
-            onClick={handleReset}
-            disabled={isSubmitting}
-            className="group flex items-center gap-2 text-red-500 font-bold text-[14px] disabled:opacity-50"
-          >
-            <span className="border-b-2 border-red-500 pb-0.5">Reset</span>
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSubmitting}
-            className="px-10 py-2.5 rounded-full bg-[#6CA886] text-white font-bold text-[15px] hover:bg-[#5a9072] transition-all shadow-sm disabled:opacity-60"
-          >
-            {isSubmitting ? 'กำลังบันทึก...' : 'Save Data'}
-          </button>
+        <hr className="border-slate-300" />
+
+        {/* ── ส่วนมาตรการความปลอดภัย ── */}
+        <div className="flex flex-col gap-5">
+          <h2 className="text-2xl font-bold text-[#1E2A5E]">คำอธิบายเกี่ยวกับมาตรการรักษาความมั่นคงปลอดภัย</h2>
+          <div className="flex flex-col gap-4">
+            {[
+              { label: 'มาตรการเชิงองค์กร', name: 'orgMeasure' },
+              { label: 'มาตรการเชิงเทคนิค', name: 'techMeasure' },
+              { label: 'มาตรการทางกายภาพ', name: 'physicalMeasure' },
+              { label: 'การควบคุมการเข้าถึงข้อมูล', name: 'accessControl' },
+              { label: 'การกำหนดหน้าที่ความรับผิดชอบของผู้ใช้งาน', name: 'userResponsibility' },
+              { label: 'มาตรการตรวจสอบย้อนหลัง', name: 'auditMeasure' },
+            ].map((field) => (
+              <div key={field.name} className="flex flex-col gap-1.5">
+                <label className="text-[#1E2A5E] font-medium text-[14px]">{field.label}</label>
+                <input
+                  type="text"
+                  name={field.name}
+                  value={(formData as Record<string, unknown>)[field.name] as string}
+                  onChange={handleChange}
+                  className="p-2 border border-slate-300 rounded-md text-[14px] text-slate-800 outline-none focus:border-[#8B93C5]"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-end gap-6 mt-4">
+            <button
+              onClick={handleReset}
+              disabled={isSubmitting}
+              className="text-[#E04F4F] font-bold underline hover:text-red-700 transition-colors disabled:opacity-50"
+            >
+              Reset
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSubmitting}
+              className="bg-[#6BB588] hover:bg-[#5AA176] text-white px-8 py-2.5 rounded-full font-bold shadow-sm transition-colors disabled:opacity-60"
+            >
+              {isSubmitting ? 'กำลังบันทึก...' : 'Save Data'}
+            </button>
+          </div>
         </div>
+
       </div>
     </div>
   );

@@ -31,6 +31,17 @@ const Sidebar = ({ activeMenu, setActiveMenu, userRole }: SidebarProps) => {
           )
         },
         {
+          name: 'Shared Records',
+          roles: ['Data Processor'],
+          icon: (
+            <img
+              src="https://www.svgrepo.com/show/485420/download.svg"
+              alt="dashboard icon"
+              className="w-7 h-7 mr-3 object-contain opacity-70"
+            />
+          )
+        },
+        {
           name: 'Feedback',
           roles: ['Data Controller', 'Data Processor'],
           icon: (
@@ -51,7 +62,7 @@ const Sidebar = ({ activeMenu, setActiveMenu, userRole }: SidebarProps) => {
       ]
     },
     {
-      sectionName: userRole === 'Excutive' ? 'Analytics' : 'Organization Records',
+      sectionName: userRole === 'Executive' ? 'Analytics' : 'Organization Records',
       items: [
         {
           name: 'User Management',
@@ -66,7 +77,7 @@ const Sidebar = ({ activeMenu, setActiveMenu, userRole }: SidebarProps) => {
         },
         {
           name: 'Dashboard',
-          roles: ['Admin', 'Excutive', 'DPO(Data Protection Officer)', 'Auditor'],
+          roles: ['Admin', 'Executive', 'DPO(Data Protection Officer)', 'Auditor'],
           icon: (
             <img
               src="https://www.svgrepo.com/show/10344/money-graph-with-up-arrow.svg"
@@ -77,7 +88,7 @@ const Sidebar = ({ activeMenu, setActiveMenu, userRole }: SidebarProps) => {
         },
         {
           name: 'TotalActivities',
-          roles: ['DPO(Data Protection Officer)'],
+          roles: ['DPO(Data Protection Officer)','Auditor','Admin'],
           icon: (
             <img
               src="https://www.svgrepo.com/show/521669/folder.svg"
@@ -171,7 +182,7 @@ const Sidebar = ({ activeMenu, setActiveMenu, userRole }: SidebarProps) => {
       </div>
 
       {/* ส่วนล่าง: Profile & Logout */}
-      <div className="border-t border-blue-300/30 pt-4 mt-4 space-y-3 pr-5">
+      <div className="border-t border-blue-300/30 pt-4 mt-4 space-y-3 ">
 
 
         <div className="w-full flex items-center px-6 py-4 mb-2 text-[16px] font-black text-slate-800 bg-[#A6D8FF] rounded-l-[2rem]">

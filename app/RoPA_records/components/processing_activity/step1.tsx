@@ -5,9 +5,10 @@ interface CombinedFormProps {
   onCancel: () => void;
   onSuccess?: () => void;
   initialData?: any;
+  userRole?: string;
 }
 
-export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: CombinedFormProps) {
+export default function RopaCombinedForm({ onCancel, onSuccess, initialData, userRole }: CombinedFormProps) {
   const token = localStorage.getItem('access_token');
   const [formData, setFormData] = useState({
     activityName: '',
@@ -225,22 +226,21 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
         retention_period: formData.retentionPeriod || '-',
         access_control: formData.accessRights.length > 0 ? formData.accessRights.join(', ') : '-',
         disposal_method: formData.deletionMethod || '-',
-        consent_exempt_basis: formData.useWithoutConsent || '-',
-        right_rejection_reason: formData.denialOfRights || '-',
+        consent_exempt_basis: userRole === 'Data Controller'? (formData.useWithoutConsent || '-') : '-',
+        right_rejection_reason: userRole === 'Data Controller' ? (formData.denialOfRights || '-') : '-',
         risk_level: formData.riskLevel,
         status: (() => {
           if (cleanStartDate && cleanStartDate !== '-' && formData.retentionPeriod && formData.retentionPeriod !== '-') {
             const start = new Date(cleanStartDate);
             if (!isNaN(start.getTime())) {
-              // Parse period: supports "3 ปี", "6 เดือน", bare numbers (→ years)
               const s = formData.retentionPeriod.trim().toLowerCase();
               const numMatch = s.match(/^([\d.]+)/);
               if (numMatch) {
                 const num = parseFloat(numMatch[1]);
                 if (!isNaN(num)) {
                   const isMonth = s.includes('เดือน') || s.includes('month') || s.includes('mo');
-                  const isYear  = s.includes('ปี')    || s.includes('year')  || s.includes('yr');
-                  const months  = isMonth ? num : (isYear ? num * 12 : num * 12);
+                  const isYear = s.includes('ปี') || s.includes('year') || s.includes('yr');
+                  const months = isMonth ? num : (isYear ? num * 12 : num * 12);
                   const endDate = new Date(start);
                   endDate.setMonth(endDate.getMonth() + months);
                   endDate.setHours(23, 59, 59, 999);
@@ -252,6 +252,7 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
           return 'Pending';
         })(),
       };
+
 
       // 2. บันทึก RoPA
       const ropaUrl = isEditing
@@ -305,7 +306,7 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
           ropa_id: targetRopaId,
           country: formData.destinationCountry || '-',
           recipient_name: formData.transferAffiliate === 'yes' ? (formData.transferAffiliateSpec || 'yes') : 'no',
-          
+
           transfer_method: formData.transferMethod || '-',
           protection_std: formData.exceptionArt28 || '-',
           protection_measure: formData.protectionMeasure || '-'
@@ -474,8 +475,8 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
                       <div className="flex flex-col gap-2 pl-4">
                         <div className="flex items-center gap-3">
                           <label className="flex items-center gap-3 cursor-pointer group w-fit"><CustomRadio name="transferAffiliate" value="yes" checked={formData.transferAffiliate === 'yes'} onChange={handleChange} /><span className="text-[#1E2A5E] text-[14px] ">ใช่ :</span></label>
-                          <input type="text" name="transferAffiliateSpec"         
-                            value={formData.transferAffiliateSpec} 
+                          <input type="text" name="transferAffiliateSpec"
+                            value={formData.transferAffiliateSpec}
                             onChange={handleChange} disabled={formData.transferAffiliate !== 'yes'} className="p-1 px-3 border border-slate-300 rounded-md text-[13px] flex-1 max-w-[220px] disabled:bg-slate-100 text-slate-800" placeholder='โปรดระบุ....' />
                         </div>
                         <label className="flex items-center gap-3 cursor-pointer group w-fit"><CustomRadio name="transferAffiliate" value="no" checked={formData.transferAffiliate === 'no'} onChange={handleChange} /><span className="text-[#1E2A5E] text-[14px]">ไม่ใช่</span></label>
@@ -616,8 +617,36 @@ export default function RopaCombinedForm({ onCancel, onSuccess, initialData }: C
           <hr className="border-slate-300" />
 
           <section className="flex flex-col gap-5">
-            <div className="flex flex-col gap-2"><label className="text-[#1E2A5E] font-medium text-[14px]">การใช้หรือเปิดเผยข้อมูลส่วนบุคคลที่ได้รับการยกเว้นไม่ต้องขอความยินยอม</label><input type="text" name="useWithoutConsent" value={formData.useWithoutConsent} onChange={handleChange} className="p-2 border border-slate-300 rounded-md text-[14px] w-full text-slate-800" /></div>
-            <div className="flex flex-col gap-2"><label className="text-[#1E2A5E] font-medium text-[14px]">การปฏิเสธคำขอหรือคัดค้านการใช้สิทธิของเจ้าของข้อมูลส่วนบุคคล</label><input type="text" name="denialOfRights" value={formData.denialOfRights} onChange={handleChange} className="p-2 border border-slate-300 rounded-md text-[14px] w-full text-slate-800" /></div>
+            {(userRole === 'Data Controller') && (
+              <>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[#1E2A5E] font-medium text-[14px]">
+                    การใช้หรือเปิดเผยข้อมูลส่วนบุคคลที่ได้รับการยกเว้นไม่ต้องขอความยินยอม
+                  </label>
+                  <input
+                    type="text"
+                    name="useWithoutConsent"
+                    value={formData.useWithoutConsent}
+                    onChange={handleChange}
+                    className="p-2 border border-slate-300 rounded-md text-[14px] w-full text-slate-800"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[#1E2A5E] font-medium text-[14px]">
+                    การปฏิเสธคำขอหรือคัดค้านการใช้สิทธิของเจ้าของข้อมูลส่วนบุคคล
+                  </label>
+                  <input
+                    type="text"
+                    name="denialOfRights"
+                    value={formData.denialOfRights}
+                    onChange={handleChange}
+                    className="p-2 border border-slate-300 rounded-md text-[14px] w-full text-slate-800"
+                  />
+                </div>
+              </>
+            )}
+
             <div className="flex flex-col gap-4 pl-4">
               {[{ label: 'มาตรการเชิงองค์กร', name: 'orgMeasure' }, { label: 'มาตรการเชิงเทคนิค', name: 'techMeasure' }, { label: 'มาตรการทางกายภาพ', name: 'physicalMeasure' }, { label: 'การควบคุมการเข้าถึงข้อมูล', name: 'accessControl' }, { label: 'การกำหนดหน้าที่ความรับผิดชอบของผู้ใช้งาน', name: 'userResponsibility' }, { label: 'มาตรการตรวจสอบย้อนหลัง', name: 'auditMeasure' }].map(field => (
                 <div key={field.name} className="flex flex-col gap-1.5"><span className="text-[#1E2A5E] text-[13px] ">{field.label}</span><input type="text" name={field.name} value={(formData as any)[field.name]} onChange={handleChange} className="p-2 border border-slate-300 rounded-md text-[14px] w-full max-w-[700px] text-slate-800" /></div>

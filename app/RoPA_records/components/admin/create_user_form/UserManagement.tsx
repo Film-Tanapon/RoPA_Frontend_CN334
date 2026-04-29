@@ -418,7 +418,7 @@ export default function UserManagement({ searchTerm, setSearchTerm }: any) {
 
             {isRoleOpen && (
               <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-50 py-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                {["All", "Data Controller", "Data Processor", "DPO(Data Protection Officer)", "Admin", "Auditor", "Excutive"].map((role) => (
+                {["All", "Data Controller", "Data Processor", "DPO(Data Protection Officer)", "Admin", "Auditor", "Executive"].map((role) => (
                   <div
                     key={role}
                     onClick={() => { setRoleFilter(role); setIsRoleOpen(false); }}

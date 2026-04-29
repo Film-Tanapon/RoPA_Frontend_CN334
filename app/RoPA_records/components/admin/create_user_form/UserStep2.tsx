@@ -33,7 +33,7 @@ export default function UserStep2({
     { title: 'DPO(Data Protection Officer)' },
     { title: 'Admin' },
     { title: 'Auditor' },
-    { title: 'Excutive' }
+    { title: 'Executive' }
   ];
 
   const statuses = [

@@ -381,6 +381,54 @@ function RopaFormReadOnly({
 }
 
 // ─────────────────────────────────────────────
+// Extension Popup Component
+// ─────────────────────────────────────────────
+function ExtensionPopup({
+  onClose,
+  onSubmit,
+  isSubmitting,
+}: {
+  onClose: () => void;
+  onSubmit: (extensionPeriod: string) => void;
+  isSubmitting: boolean;
+}) {
+  const [extensionPeriod, setExtensionPeriod] = useState('');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm mx-4 relative animate-in zoom-in-95 duration-200">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-all text-xl leading-none"
+        >
+          ×
+        </button>
+        <h3 className="text-[#2D3663] font-bold text-lg mb-5">ระยะเวลาที่ต้องการต่ออายุ</h3>
+        <input
+          type="text"
+          value={extensionPeriod}
+          onChange={e => setExtensionPeriod(e.target.value)}
+          placeholder="เช่น 5 ปี, 10 ปี"
+          className="w-full p-3 border border-slate-200 rounded-xl text-[#334155] text-[15px] outline-none focus:border-blue-400 transition-all placeholder:text-slate-300 mb-6"
+        />
+        <div className="flex justify-end">
+          <button
+            onClick={() => {
+              if (!extensionPeriod.trim()) { alert('กรุณากรอกระยะเวลาที่ต้องการต่ออายุ'); return; }
+              onSubmit(extensionPeriod.trim());
+            }}
+            disabled={isSubmitting}
+            className="px-7 py-2.5 bg-[#00C853] text-white rounded-full font-bold text-[15px] shadow hover:bg-[#00A844] transition-all active:scale-95 disabled:opacity-60"
+          >
+            {isSubmitting ? 'Processing...' : 'Submit Extension'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Main ExpirationAlert Component
 // ─────────────────────────────────────────────
 export default function ExpirationAlert() {
@@ -389,6 +437,7 @@ export default function ExpirationAlert() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showExtensionPopup, setShowExtensionPopup] = useState(false);
 
   const getToken = () => localStorage.getItem('access_token');
   const authHeaders = () => ({
@@ -420,8 +469,12 @@ export default function ExpirationAlert() {
 
   useEffect(() => { fetchExpiredRecords(); }, []);
 
-  // ── Extend Retention: send to ExtendRetention page via request ──
-  const handleExtendRetention = async () => {
+  // ── Extend Retention: open popup first ──
+  const handleExtendRetention = () => {
+    setShowExtensionPopup(true);
+  };
+
+  const handleSubmitExtension = async (extensionPeriod: string) => {
     if (!selectedItem) return;
     const userIdStr = localStorage.getItem('user_id');
     const userId = userIdStr ? parseInt(userIdStr) : 0;
@@ -432,6 +485,7 @@ export default function ExpirationAlert() {
         req_type: 'ExtendRetention',
         status: 'Pending',
         create_by: userId,
+        extension_period: extensionPeriod,
       };
       const res = await fetch('http://localhost:3340/requests', {
         method: 'POST',
@@ -439,6 +493,7 @@ export default function ExpirationAlert() {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
+        setShowExtensionPopup(false);
         alert('ส่งคำขอต่ออายุการเก็บข้อมูลเรียบร้อยแล้ว');
         setView('list');
         setSelectedItem(null);
@@ -486,6 +541,13 @@ export default function ExpirationAlert() {
   if (view === 'form' && selectedItem) {
     return (
       <div className="flex flex-col h-full p-4 bg-[#F0F9FF] overflow-hidden">
+        {showExtensionPopup && (
+          <ExtensionPopup
+            onClose={() => setShowExtensionPopup(false)}
+            onSubmit={handleSubmitExtension}
+            isSubmitting={isSubmitting}
+          />
+        )}
         <RopaFormReadOnly
           initialData={selectedItem}
           onCancel={() => { setView('list'); setSelectedItem(null); }}

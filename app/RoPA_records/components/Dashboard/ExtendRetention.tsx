@@ -40,7 +40,10 @@ function ExtendRetentionForm({
   useEffect(() => {
     if (!ropaData) return;
     if (ropaData.retention_start && ropaData.retention_start !== '-') setNewStartDate(ropaData.retention_start);
-    if (ropaData.retention_period && ropaData.retention_period !== '-') setNewPeriod(ropaData.retention_period);
+    // Pre-fill period from extension_period if available, else from current retention_period
+    const preferred = (ropaData as any).extension_period;
+    if (preferred && preferred !== '-') setNewPeriod(preferred);
+    else if (ropaData.retention_period && ropaData.retention_period !== '-') setNewPeriod(ropaData.retention_period);
 
     // Fetch current security measures
     const token = localStorage.getItem('access_token');
@@ -235,7 +238,22 @@ export default function ExtendRetention() {
         const extendRequests = all.filter(
           r => r.req_type === 'ExtendRetention' && r.status === 'Pending'
         );
-        setRequests(extendRequests);
+
+        // Enrich with activity_name from ropa records
+        const enriched = await Promise.all(
+          extendRequests.map(async (req) => {
+            try {
+              const ropaRes = await fetch(`http://localhost:3340/ropa-records/${req.ropa_id}`, { headers: authHeaders() });
+              if (ropaRes.ok) {
+                const ropaData = await ropaRes.json();
+                const ropa = ropaData.data || ropaData;
+                return { ...req, activity_name: ropa.activity_name };
+              }
+            } catch {}
+            return req;
+          })
+        );
+        setRequests(enriched);
       }
     } catch (err) { console.error('Fetch error:', err); }
     finally { setIsLoading(false); }
@@ -251,7 +269,9 @@ export default function ExtendRetention() {
       });
       if (res.ok) {
         const data = await res.json();
-        setSelectedRopa(data.data || data);
+        const ropaRecord = data.data || data;
+        // Attach extension_period from request so the form can pre-fill it
+        setSelectedRopa({ ...ropaRecord, extension_period: req.extension_period });
         setView('form');
       }
     } catch (err) { console.error('Error fetching ropa:', err); }
@@ -358,7 +378,10 @@ export default function ExtendRetention() {
             >
               <div className="py-6 px-10 flex flex-col gap-1">
                 <span className="text-[#2D3663] font-bold text-2xl">
-                  คำขอ #{req.id} — RoPA ID: {req.ropa_id}
+                  {req.activity_name || `คำขอ #${req.id} — RoPA ID: ${req.ropa_id}`}
+                </span>
+                <span className="text-[#4A85E6] text-[13px] font-medium">
+                  ระยะเวลาที่ต้องการต่ออายุ: {req.extension_period || '...'}
                 </span>
                 <span className="text-slate-400 text-[13px] font-medium">
                   สถานะ: {req.status} | สร้างเมื่อ: {req.create_date ? new Date(req.create_date).toLocaleDateString('th-TH') : '-'}

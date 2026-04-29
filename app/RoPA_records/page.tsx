@@ -10,6 +10,7 @@ import TotalActivitiesTable from './components/Dashboard/TotalActivitiesTable';
 import PendingReview from './components/Dashboard/PendingReview';
 import DeleteRequest from './components/Dashboard/DeleteRequest';
 import ExtendRetention from './components/Dashboard/ExtendRetention';
+import SharedRecords from './components/SharedRecords';
 
 import { jwtDecode } from "jwt-decode";
 
@@ -91,7 +92,7 @@ export default function RoPARecordsPage() {
 
         if (role === 'Admin') {
           setActiveMenu('User Management');
-        } else if (['Excutive', 'Auditor', 'DPO(Data Protection Officer)'].includes(role)) {
+        } else if (['Executive', 'Auditor', 'DPO(Data Protection Officer)'].includes(role)) {
           setActiveMenu('Dashboard');
         } else if (role === 'Data Controller' || role === 'Data Processor') {
           setActiveMenu('RoPA Records');
@@ -130,10 +131,11 @@ export default function RoPARecordsPage() {
     if (activeMenu === 'Dashboard') return <Dashboard />;
     if (activeMenu === 'Feedback') return <Feedback />;
     if (activeMenu === 'Expiration Alert') return <ExpirationAlert />;
-    if (activeMenu === 'TotalActivities') return <TotalActivitiesTable onEdit={(item) => { setEditingItem(item); setIsCreating(true); }} />;
+    if (activeMenu === 'TotalActivities') return <TotalActivitiesTable onEdit={(item) => { setEditingItem(item); setIsCreating(true); }} userRole={userRole} />; 
     if (activeMenu === 'Pending Review') return <PendingReview />;
     if (activeMenu === 'Delete Request') return <DeleteRequest userRole={userRole} />;
     if (activeMenu === 'Extend Retention') return <ExtendRetention />;
+    if (activeMenu === 'Shared Records') return <SharedRecords/>;
 
     if (isCreating || editingItem) {
       return (
@@ -141,6 +143,7 @@ export default function RoPARecordsPage() {
           initialData={editingItem}
           onCancel={() => { setIsCreating(false); setEditingItem(null); }}
           onSuccess={() => { setIsCreating(false); setEditingItem(null); loadRecords(); }}
+          userRole={userRole}
         />
       );
     }
@@ -156,8 +159,8 @@ export default function RoPARecordsPage() {
           return 'bg-green-600 text-white';
         case 'Pending':
           return 'bg-amber-400 text-white'; // สีเหลือง
-        case 'Action require':
-          return 'bg-slate-400 text-white'; // สีเทา
+        case 'Action Required':
+          return 'bg-slate-400 text-white';
         default:
           return 'bg-green-600 text-white'; // สีเขียว (กรณี Active หรืออื่นๆ)
       }
@@ -211,18 +214,7 @@ export default function RoPARecordsPage() {
                     แก้ไข
                   </button>
                 )}
-                <button
-                  onClick={handleDeleteSelected}
-                  className="flex items-center gap-2 px-5 py-1.5 bg-[#EF4444] text-white rounded-full text-[11px] font-bold uppercase tracking-wider shadow-sm hover:bg-[#dc2626] transition-colors"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    <line x1="10" y1="11" x2="10" y2="17"></line>
-                    <line x1="14" y1="11" x2="14" y2="17"></line>
-                  </svg>
-                  ลบ {selectedIds.length > 1 ? `(${selectedIds.length})` : ''}
-                </button>
+
               </div>
             )}
             <div className="flex-1 border-b border-slate-300"></div>
@@ -268,13 +260,13 @@ export default function RoPARecordsPage() {
                       <td className="p-4 text-slate-600">{item.data_subject || '-'}</td>
                       <td className="p-4 text-slate-600">{item.data_category || '-'}</td>
                       <td className="p-4 text-center">
-                        <span className={`text-[11px] font-bold uppercase ${item.risk_level === 'ความเสี่ยงระดับสูง'
-                          ? 'text-red-500'
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black ${item.risk_level === 'ความเสี่ยงระดับสูง'
+                          ? 'bg-red-50 text-red-500'
                           : item.risk_level === 'ความเสี่ยงระดับกลาง'
-                            ? 'text-yellow-500'
-                            : 'text-green-500'
+                            ? 'bg-yellow-50 text-yellow-600'
+                            : 'bg-emerald-50 text-emerald-500'
                           }`}>
-                          {item.risk_level || 'ปานกลาง'}
+                          {item.risk_level || 'ความเสี่ยงระดับต่ำ'}
                         </span>
                       </td>
                       <td className="p-4 text-center">
